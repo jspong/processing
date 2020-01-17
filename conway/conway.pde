@@ -7,47 +7,112 @@ int UPDATES_PER_SECOND = 4;      // The number of simulation steps per second
 int STARTING_PERCENT = 30;       // How much of the board should be filled in setup
 int FRAME_RATE = 32;             // The overall framerate of the simulation
 
-// SYSTEM STATE
-Cell[][] cells = new Cell[NUM_CELLS][NUM_CELLS];
-
 // EVENT FUNCTIONS
 void setup() {
   size(1024,1024);
   frameRate(FRAME_RATE);
   background(255);
-
-  for (int i = 0; i < NUM_CELLS; i++) {
-    for (int j = 0; j < NUM_CELLS; j++) {
-      cells[i][j] = new Cell(random(100) < STARTING_PERCENT ? ALIVE : DEAD);
-    }
-  }
 }
 
+Automaton game = new GameOfLife(NUM_CELLS, NUM_CELLS);
+
 void draw() {
-  step();
-  
-  for (int i = 0; i < NUM_CELLS; i++) {
-    for (int j = 0; j < NUM_CELLS; j++) {
-      cells[i][j].draw(i, j);
-      cells[i][j].tick();
-    }
-  }
+  game.Run();
 }
 
 // GAME LOGIC
 
-void step() {
-  for (int i = 0; i < NUM_CELLS; i++) {
-    for (int j = 0; j < NUM_CELLS; j++) {
-      int neighbors = numNeighbors(i,j);
-      if (cells[i][j].state == DEAD) {
-         if (neighbors == 3) {
-           cells[i][j].revive();
-         }  
-      } else if (cells[i][j].state == ALIVE) {
-        if (neighbors < 2 || neighbors > 3) {
-           cells[i][j].kill();
-         }
+abstract class Automaton {
+  protected boolean modify_in_place = false;
+  
+  protected int Width, Height;
+   
+  protected Cell[][] cells;
+  
+  Automaton(int Width, int Height) {
+    cells = new Cell[Width][Height];
+    for (int x = 0; x < Width; x++) {
+      for (int y = 0; y < Height; y++) {
+        cells[x][y] = new Cell(random(100) < STARTING_PERCENT ? 1 : 0);
+      }
+    }
+    // todo: can infer from array?
+    this.Width = Width;
+    this.Height = Height;
+  }
+  
+  protected abstract void calculate(int x, int y);
+  
+  void Run() {
+    step();
+    this.draw();
+    after();
+  }
+  
+  private void step() {
+    for (int x = 0; x < Width; x++) {
+      for (int y = 0; y < Height; y++) {
+        this.calculate(x, y);
+        if (modify_in_place) {
+          cells[x][y].tick(); 
+        }
+      }
+    }
+  }
+  
+  private void draw() {
+    for (int x = 0; x < Width; x++) {
+      for (int y = 0; y < Height; y++) {
+        cells[x][y].draw(x, y);
+      }
+    }
+  }
+  
+  private void after() {
+    if (modify_in_place) return;
+    for (int x = 0; x < Width; x++) {
+      for (int y = 0; y < Height; y++) {
+        cells[x][y].tick();
+      }
+    }
+  }
+  
+
+  int getValue(int x, int y) {
+     if (x < 0 || y < 0 || x >= NUM_CELLS || y >= NUM_CELLS) {
+       return 0;
+     } 
+     return cells[x][y].state;
+  }
+
+  int numNeighbors(int x, int y) {
+    return getValue(x-1, y-1) +
+           getValue(x-1, y+0) +
+           getValue(x-1, y+1) +
+           getValue(x+0, y-1) +
+           getValue(x+0, y+1) +
+           getValue(x+1, y-1) +
+           getValue(x+1, y+0) +
+           getValue(x+1, y+1);
+}
+}
+
+class GameOfLife extends Automaton {
+  
+  GameOfLife(int Width, int Height) {
+    super(Width, Height);
+  }
+  
+  void calculate(int x, int y) {
+    int neighbors = numNeighbors(x, y);
+    Cell cell = cells[x][y];
+    if (cell.state == DEAD) {
+      if (neighbors == 3) {
+        cell.revive();
+      }
+    } else if (cell.state == ALIVE) {
+      if (neighbors < 2 || neighbors > 3) {
+        cell.kill();
       }
     }
   }
@@ -59,24 +124,6 @@ Color lerp(Color a, Color b, float t) {
   return new Color(lerp(a.r, b.r, t),
                    lerp(a.g, b.g, t),
                    lerp(a.b, b.b, t));
-}
-
-int getValue(int x, int y) {
-   if (x < 0 || y < 0 || x >= NUM_CELLS || y >= NUM_CELLS) {
-     return 0;
-   }
-   return cells[x][y].state;
-}
-
-int numNeighbors(int x, int y) {
-  return getValue(x-1, y-1) +
-         getValue(x-1, y+0) +
-         getValue(x-1, y+1) +
-         getValue(x+0, y-1) +
-         getValue(x+0, y+1) +
-         getValue(x+1, y-1) +
-         getValue(x+1, y+0) +
-         getValue(x+1, y+1);
 }
 
 // CLASSES
@@ -117,8 +164,15 @@ class Cell {
   void draw(int x, int y) {
     int cell_width = width / NUM_CELLS;
     int cell_height = height / NUM_CELLS;
+    WHITE.set_fill();
+    WHITE.set_stroke();
+    rect(x * cell_width + 1, y * cell_height + 1, cell_width - 2, cell_height - 2);
     _color().set_fill();
-    rect(x * cell_width, y * cell_height, cell_width, cell_height);
+    _color().set_stroke();
+    ellipse(((float)x + 0.5) * cell_width,
+           ((float)y + 0.5) * cell_height,
+           cell_width-2,
+           cell_height-2);
   }
   
   private Color _color() {
@@ -143,6 +197,10 @@ class Color {
   
   void set_fill() {
     fill(r, g, b);
+  }
+  
+  void set_stroke() {
+    stroke(r, g, b);
   }
 }
 
