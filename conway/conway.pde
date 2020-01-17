@@ -208,8 +208,8 @@ class Color {
 
 Color WHITE = new Color(255,255,255);
 Color BLACK = new Color(0, 0, 0);
-Color RED = new Color(255, 128, 128);
-Color BLUE = new Color(128, 200, 255);
+Color RED = new Color(255, 200, 200);
+Color BLUE = new Color(150, 150, 255);
 
 int DEAD = 0;
 int ALIVE = 1;
