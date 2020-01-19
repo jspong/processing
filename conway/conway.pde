@@ -1,6 +1,7 @@
+
 // CONFIGURATION VARIABLES
 
-int NUM_CELLS = 128;              // The width and height of the board in cells
+int NUM_CELLS = 64;              // The width and height of the board in cells
 boolean ANIMATE = true;          // Whether or not to animate state transitions
 
 int UPDATES_PER_SECOND = 4;      // The number of simulation steps per second
@@ -9,7 +10,7 @@ int FRAME_RATE = 8;             // The overall framerate of the simulation
 
 // EVENT FUNCTIONS
 void setup() {
-  size(1024, 1024);
+  size(512, 512);
   frameRate(FRAME_RATE);
   background(255);
 }
@@ -76,7 +77,6 @@ abstract class Automaton {
       }
     }
   }
-  
 
   int getValue(int x, int y) {
     if (x != constrain(x, 0, NUM_CELLS - 1) || y != constrain(y, 0, NUM_CELLS - 1)) {
@@ -94,7 +94,7 @@ abstract class Automaton {
            getValue(x+1, y-1) +
            getValue(x+1, y+0) +
            getValue(x+1, y+1);
-}
+  }
 }
 
 class GameOfLife extends Automaton {
@@ -217,7 +217,7 @@ class Color {
 Color WHITE = new Color(255,255,255);
 Color BLACK = new Color(0, 0, 0);
 Color RED = new Color(255, 200, 200);
-Color BLUE = new Color(150, 150, 255);
+Color BLUE = new Color(80, 80, 150);
 
 int DEAD = 0;
 int ALIVE = 1;
