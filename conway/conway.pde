@@ -1,15 +1,15 @@
 // CONFIGURATION VARIABLES
 
-int NUM_CELLS = 32;              // The width and height of the board in cells
+int NUM_CELLS = 128;              // The width and height of the board in cells
 boolean ANIMATE = true;          // Whether or not to animate state transitions
 
 int UPDATES_PER_SECOND = 4;      // The number of simulation steps per second
 int STARTING_PERCENT = 30;       // How much of the board should be filled in setup
-int FRAME_RATE = 32;             // The overall framerate of the simulation
+int FRAME_RATE = 8;             // The overall framerate of the simulation
 
 // EVENT FUNCTIONS
 void setup() {
-  size(1024,1024);
+  size(1024, 1024);
   frameRate(FRAME_RATE);
   background(255);
 }
@@ -79,7 +79,7 @@ abstract class Automaton {
   
 
   int getValue(int x, int y) {
-     if (x < 0 || y < 0 || x >= NUM_CELLS || y >= NUM_CELLS) {
+    if (x != constrain(x, 0, NUM_CELLS - 1) || y != constrain(y, 0, NUM_CELLS - 1)) {
        return 0;
      } 
      return cells[x][y].state;
@@ -132,10 +132,12 @@ class Cell {
   int state,                // The current state, for calculating simulation
       next_state;   // The next computed state, to be updated after animation
   private float count;      // The number of remaining animation steps
+  boolean dirty;
   
   Cell(int state) {
     this.state = this.next_state = state;
     this.count = 0;
+    this.dirty = true;
   }
   
   void kill() {
@@ -154,14 +156,20 @@ class Cell {
   
   void tick() {
     if (count > 0) {
+      dirty = true;
       count -= 1;
-    }
-    if (count <= 0) {
-      state = next_state;
+      if (count <= 0) {
+        state = next_state;
+      }
+    } else {
+      dirty = false;
     }
   }
   
   void draw(int x, int y) {
+    if (!dirty && state == next_state) {
+      return;
+    }
     int cell_width = width / NUM_CELLS;
     int cell_height = height / NUM_CELLS;
     WHITE.set_fill();
