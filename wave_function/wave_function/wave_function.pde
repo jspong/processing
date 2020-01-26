@@ -1,5 +1,6 @@
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -119,7 +120,6 @@ class Collapser {
   int count;
   HashMap<Integer, Float> entropy;
   List<Set<Integer>> wave;
-  Integer[] buffer;
   int w, h;
   boolean success;
   
@@ -146,7 +146,6 @@ class Collapser {
         entropy.put(pos(x,y), patternIndexes.size() - random(0.1));
       }
     }
-    buffer = new Integer[patternIndexes.size()];
     visits = new Stack<List<Visit>>();
   }
   
@@ -194,41 +193,44 @@ class Collapser {
     if (!entropy.containsKey(idN)) return true;
     
     Set<Integer> possible = new HashSet<Integer>();
-    wave.get(idC).toArray(buffer);
-    for (int i = 0; i < wave.get(idC).size(); i++) {
-      possible.addAll(options.get(buffer[i]));
+    List<Integer> patterns = new ArrayList<Integer>(wave.get(idC));
+    for (int i = 0; i < patterns.size(); i++) {
+      possible.addAll(options.get(patterns.get(i)));
     }
     
-    if (possible.containsAll(wave.get(idN))) return true;
-    Set<Integer> previous = new HashSet<Integer>(wave.get(idN));
-    wave.get(idN).retainAll(possible);
-    if (wave.get(idN).size() == 0) {
+    Set<Integer> neighbor = wave.get(idN);
+    if (possible.containsAll(neighbor)) return true;
+    Set<Integer> previous = new HashSet<Integer>(neighbor);
+    neighbor.retainAll(possible);
+    if (neighbor.size() == 0) {
       print("conflict at " + idN);
       wave.set(idN, previous);
       return false;
     } else {
       moves.add(new Visit(idN, 0, previous));
-      entropy.put(idN, wave.get(idN).size() - random(0.1));
+      entropy.put(idN, neighbor.size() - random(0.1));
       stack.push(idN);
       return true;
     }
   }
   
   int weighted_choice(int id) {
-    wave.get(id).toArray(buffer);
+    Set<Integer> choices = wave.get(id);
+    List<Integer> choice_list = new ArrayList<Integer>(choices);
+    
     int total = 0;
-    float[] weights = new float[wave.get(id).size()];
+    float[] weights = new float[choices.size()];
     for (int i = 0; i < weights.length; i++) {
-        total += rules.counts.get(buffer[i]);
+        total += rules.counts.get(choice_list.get(i));
         weights[i] = total;
     }
     float choice = random(1.0);
     for (int i = 0; i < weights.length; i++) {
       if (weights[i] / total > choice) {
-        return buffer[i]; 
+        return choice_list.get(i); 
       }
     }
-    return buffer[buffer.length - 1];
+    return choice_list.get(choice_list.size() - 1);
   }
   
   void undo(List<Visit> visits) {
@@ -296,7 +298,7 @@ Collapser collapser;
 int size = 10;
 
 void setup() {
-  size(864, 450);
+  size(800, 450);
   background(255);
   frameRate(10000);
   noStroke();
