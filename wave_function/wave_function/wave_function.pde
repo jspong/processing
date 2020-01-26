@@ -121,6 +121,9 @@ class Collapser {
   List<Set<Integer>> wave;
   Integer[] buffer;
   int w, h;
+  boolean success;
+  
+  Stack<List<Visit>> visits;
   
   Collapser(ImageProperties rules, int w, int h) {
     this.rules = rules;
@@ -130,6 +133,7 @@ class Collapser {
     this.generated.loadPixels();
     entropy = new HashMap<Integer, Float>();
     wave = new ArrayList<Set<Integer>>(w * h);
+    success = true;
     
     List<Integer> patternIndexes = new ArrayList<Integer>(rules.patterns.size());
     for (int i = 0; i < rules.patterns.size(); i++) {
@@ -143,7 +147,20 @@ class Collapser {
       }
     }
     buffer = new Integer[patternIndexes.size()];
+    visits = new Stack<List<Visit>>();
   }
+  
+  class Visit {
+    int id;
+    int choice;
+    Set<Integer> patternIds;
+    
+    Visit(int id, int choice, Set<Integer> patternIds) {
+      this.id = id;
+      this.choice = choice;
+      this.patternIds = patternIds;
+    }
+  } 
   
   boolean done() {
     return entropy.size() == 0;
@@ -169,12 +186,12 @@ class Collapser {
     return x + y * w;
   }
 
-  void update(int x, int y, int x_offset, int y_offset, HashMap<Integer, Set<Integer>> options, Stack<Integer> stack) {
+  boolean update(int x, int y, int x_offset, int y_offset, HashMap<Integer, Set<Integer>> options, Stack<Integer> stack, List<Visit> moves) {
     int x2 = (x + x_offset) % w;
     int y2 = (y + y_offset) % h;
     int idC = pos(x, y);
     int idN = pos(x2, y2);
-    if (!entropy.containsKey(idN)) return;
+    if (!entropy.containsKey(idN)) return true;
     
     Set<Integer> possible = new HashSet<Integer>();
     wave.get(idC).toArray(buffer);
@@ -182,14 +199,18 @@ class Collapser {
       possible.addAll(options.get(buffer[i]));
     }
     
-    if (possible.containsAll(wave.get(idN))) return;
+    if (possible.containsAll(wave.get(idN))) return true;
+    Set<Integer> previous = new HashSet<Integer>(wave.get(idN));
     wave.get(idN).retainAll(possible);
     if (wave.get(idN).size() == 0) {
       print("conflict at " + idN);
-      entropy.remove(idN);
+      wave.set(idN, previous);
+      return false;
     } else {
+      moves.add(new Visit(idN, 0, previous));
       entropy.put(idN, wave.get(idN).size() - random(0.1));
       stack.push(idN);
+      return true;
     }
   }
   
@@ -209,27 +230,63 @@ class Collapser {
     }
     return buffer[buffer.length - 1];
   }
-
+  
+  void undo(List<Visit> visits) {
+    for (int i = 0; i < visits.size(); i++) {
+      Visit v = visits.get(visits.size() - 1 - i);
+      wave.set(v.id, v.patternIds);
+      entropy.put(v.id, wave.get(v.id).size() - random(0.1));
+    }
+    generated.pixels[visits.get(0).id] = color(255);
+  }
+  
   int step() {
-    int id = min_entropy();
+    List<Visit> moves = new ArrayList<Visit>();
+    int id;
+    if (success) {
+      id = min_entropy();
+      success = step(min_entropy(), moves);
+    } else {
+      while (!visits.isEmpty() && visits.peek().get(0).patternIds.isEmpty()) {
+        List<Visit> last = visits.pop();
+        undo(last);
+      }
+      if (visits.isEmpty()) return -1;
+      List<Visit> lastVisits = visits.pop();
+      Visit last = lastVisits.get(0);
+      undo(lastVisits);
+      id = last.id;
+      wave.get(id).remove(last.choice);
+      Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
+      moves.add(new Visit(id, (Integer)wave.get(id).toArray()[0], remaining));
+      success = step(last.id, moves);
+    }
+    visits.push(moves);
+    return id;
+  }
+
+  boolean step(int id, List<Visit> moves) {
     Stack<Integer> stack = new Stack<Integer>();
     stack.push(id);
     int choice = weighted_choice(id);
     entropy.remove(id);
+    Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
+    remaining.remove(choice);
+    moves.add(new Visit(id, 0, remaining));
     wave.get(id).clear();
     wave.get(id).add(choice);
     
     while (!stack.isEmpty()) {
       int idc = stack.pop();
       int x = idc % w, y = idc / w;
-      update(x, y,  1,  0, rules.rights, stack);
-      update(x, y, -1,  0, rules.lefts, stack);
-      update(x, y,  0,  1, rules.downs, stack);
-      update(x, y,  0, -1, rules.ups, stack);
+      if (!update(x, y,  1,  0, rules.rights, stack, moves)) return false;
+      if (!update(x, y, -1,  0, rules.lefts, stack, moves)) return false;
+      if (!update(x, y,  0,  1, rules.downs, stack, moves)) return false;
+      if (!update(x, y,  0, -1, rules.ups, stack, moves)) return false;
     }
     
     generated.pixels[id] = rules.patterns.get(choice).values[4];
-    return id;
+    return true;
   }
 }
 
@@ -252,18 +309,10 @@ void draw() {
   if (collapser.done()) {
     noLoop();
   } else {
-    int id = -1;
-    try {
-      id = collapser.step();
-    } catch (RuntimeException e) {
-      print("restarting");
-      collapser = new Collapser(props, width / size, height / size);
-    }
-    if (id != -1) {
-      int x = id % collapser.w,
-          y = id / collapser.w;
-      fill(collapser.generated.pixels[id]);
-      rect(x*size, y*size, size, size);
-    }
+    int id = collapser.step();
+    int x = id % collapser.w,
+        y = id / collapser.w;
+    fill(collapser.generated.pixels[id]);
+    rect(x*size, y*size, size, size);
   }
 }
