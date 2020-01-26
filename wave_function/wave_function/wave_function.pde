@@ -73,12 +73,12 @@ class ImageProperties {
            x + (y + 2) % h * w, (x + 1) % w + (y + 2) % h * w, (x + 2) % w + (y + 2) % h * w
         };
         
-        Integer[] pattern = new Integer[] {
+        Pattern p = new Pattern(new Integer[] {
           pix[pi[0]], pix[pi[1]], pix[pi[2]],
           pix[pi[3]], pix[pi[4]], pix[pi[5]],
           pix[pi[6]], pix[pi[7]], pix[pi[8]]
-        };
-        Pattern p = new Pattern(pattern);
+        });
+        
         if (!patternCounts.containsKey(p)) {
           patternCounts.put(p, 0); 
         }
