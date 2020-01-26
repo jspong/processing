@@ -203,7 +203,6 @@ class Collapser {
     Set<Integer> previous = new HashSet<Integer>(neighbor);
     neighbor.retainAll(possible);
     if (neighbor.size() == 0) {
-      print("conflict at " + idN);
       wave.set(idN, previous);
       return false;
     } else {
@@ -247,34 +246,35 @@ class Collapser {
     int id;
     if (success) {
       id = min_entropy();
-      success = step(min_entropy(), moves);
+      success = collapse(min_entropy(), moves);
     } else {
       while (!visits.isEmpty() && visits.peek().get(0).patternIds.isEmpty()) {
         List<Visit> last = visits.pop();
         undo(last);
       }
       if (visits.isEmpty()) return -1;
+      
       List<Visit> lastVisits = visits.pop();
       Visit last = lastVisits.get(0);
       undo(lastVisits);
       id = last.id;
       wave.get(id).remove(last.choice);
       Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
-      moves.add(new Visit(id, (Integer)wave.get(id).toArray()[0], remaining));
-      success = step(last.id, moves);
+      moves.add(new Visit(id, (int)wave.get(id).toArray()[0], remaining));
+      success = collapse(last.id, moves);
     }
     visits.push(moves);
     return id;
   }
 
-  boolean step(int id, List<Visit> moves) {
+  boolean collapse(int id, List<Visit> moves) {
     Stack<Integer> stack = new Stack<Integer>();
     stack.push(id);
     int choice = weighted_choice(id);
     entropy.remove(id);
     Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
     remaining.remove(choice);
-    moves.add(new Visit(id, 0, remaining));
+    moves.add(new Visit(id, choice, remaining));
     wave.get(id).clear();
     wave.get(id).add(choice);
     
