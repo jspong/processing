@@ -314,7 +314,7 @@ void setup() {
 
 void draw() {
   if (collapser.done()) {
-    noLoop();
+    collapser = new Collapser(props, width/size, height/size);
   } else {
     int id = collapser.step();
     int x = id % collapser.w,
