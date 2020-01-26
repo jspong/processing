@@ -113,6 +113,18 @@ class ImageProperties {
   }
 }
 
+class Visit {
+  int id;
+  int choice;
+  Set<Integer> patternIds;
+    
+  Visit(int id, int choice, Set<Integer> patternIds) {
+    this.id = id;
+    this.choice = choice;
+    this.patternIds = patternIds;
+  }
+} 
+
 class Collapser {
   ImageProperties rules;
   PImage generated;
@@ -147,18 +159,6 @@ class Collapser {
     }
     visits = new Stack<List<Visit>>();
   }
-  
-  class Visit {
-    int id;
-    int choice;
-    Set<Integer> patternIds;
-    
-    Visit(int id, int choice, Set<Integer> patternIds) {
-      this.id = id;
-      this.choice = choice;
-      this.patternIds = patternIds;
-    }
-  } 
   
   boolean done() {
     return entropy.size() == 0;
@@ -292,8 +292,6 @@ class Collapser {
     return true;
   }
 }
-
-
 
 ImageProperties props;
 Collapser collapser;
