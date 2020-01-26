@@ -27,11 +27,12 @@ class Pattern {
   }
   
   public int hashCode() {
-    String s = "";
-    for (int i = 0; i < values.length; i++) {
-      s = s + "_" + values[i]; 
+    // https://stackoverflow.com/questions/19854564/hash-integer-array
+    int hash = 17;
+    for (int value : values) {
+      hash = hash * 31 + value;
     }
-    return s.hashCode();
+    return hash;
   }
   
   public boolean overlaps_down(Pattern other) {
