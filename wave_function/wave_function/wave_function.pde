@@ -202,6 +202,7 @@ class Collapser {
     if (possible.containsAll(neighbor)) return true;
     Set<Integer> previous = new HashSet<Integer>(neighbor);
     neighbor.retainAll(possible);
+    
     if (neighbor.size() == 0) {
       wave.set(idN, previous);
       return false;
@@ -257,11 +258,13 @@ class Collapser {
       List<Visit> lastVisits = visits.pop();
       Visit last = lastVisits.get(0);
       undo(lastVisits);
+      
       id = last.id;
       wave.get(id).remove(last.choice);
       Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
-      moves.add(new Visit(id, (int)wave.get(id).toArray()[0], remaining));
-      success = collapse(last.id, moves);
+      moves.add(new Visit(id, 0, remaining));
+      success = collapse(id, moves);
+      moves.get(0).choice = (int)wave.get(id).iterator().next();
     }
     visits.push(moves);
     return id;
@@ -291,6 +294,8 @@ class Collapser {
     return true;
   }
 }
+
+
 
 ImageProperties props;
 Collapser collapser;
