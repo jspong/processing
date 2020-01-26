@@ -84,10 +84,9 @@ class ImageProperties {
         patternCounts.put(p, patternCounts.get(p) + 1);
       }
     }
-    Object[] entries = patternCounts.entrySet().toArray();
-    for (int i = 0; i < entries.length; i++) {
-      patterns.add(((Map.Entry<Pattern, Integer>)entries[i]).getKey());
-      counts.add(((Map.Entry<Pattern, Integer>)entries[i]).getValue());
+    for (Pattern pattern : patternCounts.keySet()) {
+      patterns.add(pattern);
+      counts.add(patternCounts.get(pattern));
     }
     for (int i = 0; i < patterns.size(); i++) {
       ups.put(i, new HashSet<Integer>());
@@ -166,12 +165,12 @@ class Collapser {
   }
   
   int min_entropy() {
-    float current = rules.patterns.size();
+    float min = rules.patterns.size(); 
     int id = -1;
-    for (int i = 0; i < w * h; i++) {
-      if (entropy.containsKey(i) && entropy.get(i) <= current) {
-        id = i;
-        current = entropy.get(id);
+    for (int key : entropy.keySet()) {
+      if (entropy.get(key) <= min) {
+        id = key;
+        min = entropy.get(key);
       }
     }
     return id;
@@ -193,9 +192,8 @@ class Collapser {
     if (!entropy.containsKey(idN)) return true;
     
     Set<Integer> possible = new HashSet<Integer>();
-    List<Integer> patterns = new ArrayList<Integer>(wave.get(idC));
-    for (int i = 0; i < patterns.size(); i++) {
-      possible.addAll(options.get(patterns.get(i)));
+    for (int pattern : wave.get(idC)) {
+      possible.addAll(options.get(pattern)); 
     }
     
     Set<Integer> neighbor = wave.get(idN);
@@ -234,8 +232,8 @@ class Collapser {
   }
   
   void undo(List<Visit> visits) {
-    for (int i = 0; i < visits.size(); i++) {
-      Visit v = visits.get(visits.size() - 1 - i);
+    for (int i = visits.size() - 1; i >= 0; i--) {
+      Visit v = visits.get(i);
       wave.set(v.id, v.patternIds);
       entropy.put(v.id, wave.get(v.id).size() - random(0.1));
     }
