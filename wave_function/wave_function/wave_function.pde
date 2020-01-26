@@ -232,13 +232,14 @@ class Collapser {
     return choice_list.get(choice_list.size() - 1);
   }
   
-  void undo(List<Visit> visits) {
+  Visit undo(List<Visit> visits) {
     for (int i = visits.size() - 1; i >= 0; i--) {
       Visit v = visits.get(i);
       wave.set(v.id, v.patternIds);
       entropy.put(v.id, wave.get(v.id).size() - random(0.1));
     }
     generated.pixels[visits.get(0).id] = color(255);
+    return visits.get(0);
   }
   
   int step() {
@@ -255,8 +256,7 @@ class Collapser {
       if (visits.isEmpty()) return -1;
       
       List<Visit> lastVisits = visits.pop();
-      Visit last = lastVisits.get(0);
-      undo(lastVisits);
+      Visit last = undo(lastVisits);
       
       id = last.id;
       wave.get(id).remove(last.choice);
