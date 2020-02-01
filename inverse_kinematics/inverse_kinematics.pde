@@ -1,4 +1,5 @@
-
+import java.util.List;
+import java.util.ArrayList;
 
 class Effector {
   
@@ -14,13 +15,22 @@ class Effector {
     _y = y;
   }
   
+  float distanceFrom(PVector point) {
+    float a = point.x - _x;
+    float b = point.y - _y;
+    return sqrt(a * a + b * b);
+  }
+  
   void draw() {
     pushStyle();
     fill(200, 0, 0);
     circle(_x, _y, _size);
+    popStyle();
   }
 
 }
+
+int HEIGHT = 20;
 
 class Arm {
   private int _length, _height;
@@ -29,7 +39,7 @@ class Arm {
   
   Arm(int length) {
     _length = length;
-    _height = 20;
+    _height = HEIGHT;
     _theta = 0f;
     _next = null;
   }
@@ -42,19 +52,17 @@ class Arm {
     _theta = theta;
   }
   
-  public PVector tipPosition() {
-    PMatrix2D matrix = new PMatrix2D();
-    tipPosition(matrix);
-    return matrix.mult(new PVector(0, _height/2, 0), null);
+  public void getAngles(List<Float> angles) {
+    angles.add(_theta);
+    if (_next != null) {
+      _next.getAngles(angles);
+    }
   }
   
-  public void tipPosition(PMatrix2D matrix) {
-    matrix.translate(0,_height/2);
-    matrix.rotate(_theta);
-    matrix.translate(0,-_height/2);
-    matrix.translate(_length, 0);
+  public void getLengths(List<Integer> lengths) {
+    lengths.add(_length);
     if (_next != null) {
-      _next.tipPosition(matrix);
+      _next.getLengths(lengths);
     }
   }
   
@@ -73,8 +81,16 @@ class Arm {
     popStyle();
     popMatrix();
   }
-  
-  
+}
+
+PVector calculatePosition(List<Float> angles, List<Integer> lengths) {
+  PMatrix2D matrix = new PMatrix2D();
+  for (int i = 0; i < angles.size(); i++) {
+    matrix.translate(0, HEIGHT/2);
+    matrix.rotate(angles.get(i));
+    matrix.translate(lengths.get(i), -HEIGHT/2);
+  }
+  return matrix.mult(new PVector(0, HEIGHT/2), null);
 }
 
 
@@ -86,12 +102,17 @@ Arm c = new Arm(80);
 
 void setup() {
   size(640, 480);
-  frameRate(2);
+  frameRate(4);
   a.set_next(b);
   b.set_next(c);
+  
 }
 
 float rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
+
+float step = 0.6;
+PVector rot = new PVector();
+
 
 void draw() {
   background(255);
@@ -99,16 +120,20 @@ void draw() {
   e.draw();
   translate(320, 240);
   
-  float thrash = PI/4;
-  rotX += random(-thrash, thrash);
-  rotY += random(-thrash, thrash);
-  rotZ += random(-thrash, thrash);
-  a.setRotation(rotX);
-  b.setRotation(rotY);
-  c.setRotation(rotZ);
+  rot.add(new PVector(random(-step, step), random(-step, step), random(-step, step)));
+  a.setRotation(rot.x);
+  b.setRotation(rot.y);
+  c.setRotation(rot.z);
+  
+  List<Float> angles = new ArrayList<Float>();
+  List<Integer> lengths = new ArrayList<Integer>();
+  a.getAngles(angles);
+  a.getLengths(lengths);
+  PVector position = calculatePosition(angles, lengths);
+  fill(100, 100, 230);
+  circle(position.x, position.y, 10);
+  
+  
   
   a.draw();
-  PVector spot = a.tipPosition();
-  fill(100, 100, 200);
-  circle(spot.x, spot.y, 10);
 }
