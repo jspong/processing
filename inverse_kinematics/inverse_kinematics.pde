@@ -15,7 +15,9 @@ class Effector {
   }
   
   void draw() {
-    rect(_x - _size / 2, _y - _size / 2, _size, _size);
+    pushStyle();
+    fill(200, 0, 0);
+    circle(_x, _y, _size);
   }
 
 }
@@ -27,7 +29,7 @@ class Arm {
   
   Arm(int length) {
     _length = length;
-    _height = 5;
+    _height = 20;
     _theta = 0f;
     _next = null;
   }
@@ -40,8 +42,26 @@ class Arm {
     _theta = theta;
   }
   
+  public PVector tipPosition() {
+    PMatrix2D matrix = new PMatrix2D();
+    tipPosition(matrix);
+    return matrix.mult(new PVector(0, _height/2, 0), null);
+  }
+  
+  public void tipPosition(PMatrix2D matrix) {
+    matrix.translate(0,_height/2);
+    matrix.rotate(_theta);
+    matrix.translate(0,-_height/2);
+    matrix.translate(_length, 0);
+    if (_next != null) {
+      _next.tipPosition(matrix);
+    }
+  }
+  
   void draw() {
     pushMatrix();
+    pushStyle();
+    fill(255);
     translate(0, _height/2);
     rotate(_theta);
     translate(0, -_height/2);
@@ -50,9 +70,11 @@ class Arm {
     if (_next != null) {
       _next.draw();
     }
-    
+    popStyle();
     popMatrix();
   }
+  
+  
 }
 
 
@@ -64,21 +86,29 @@ Arm c = new Arm(80);
 
 void setup() {
   size(640, 480);
-  frameRate(24);
+  frameRate(2);
   a.set_next(b);
   b.set_next(c);
 }
 
-float rot = 0.1f;
+float rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
 
 void draw() {
   background(255);
   e.setPosition(mouseX, mouseY);
   e.draw();
   translate(320, 240);
+  
+  float thrash = PI/4;
+  rotX += random(-thrash, thrash);
+  rotY += random(-thrash, thrash);
+  rotZ += random(-thrash, thrash);
+  a.setRotation(rotX);
+  b.setRotation(rotY);
+  c.setRotation(rotZ);
+  
   a.draw();
-  rot += 0.1f;
-  a.setRotation(rot);
-  b.setRotation(rot);
-  c.setRotation(rot);
+  PVector spot = a.tipPosition();
+  fill(100, 100, 200);
+  circle(spot.x, spot.y, 10);
 }
