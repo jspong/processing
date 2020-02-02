@@ -55,7 +55,7 @@ List<Float> calculateGradient(List<Float> angles, List<Integer> lengths) {
     float x2 = e.distanceFrom(calculatePosition(angles, lengths));
     
     angles.set(i, original);
-    gradient.add(x2 - x1);
+    gradient.add((x2 - x1) / step);
   }
   return gradient;
 }
@@ -108,9 +108,9 @@ void draw() {
   List<Float> gradient = calculateGradient(angles, lengths);
   
   float distance = e.distanceFrom(calculatePosition(angles, lengths));
-  float scale = distance / width * 0.5;
+  float scale = distance / width * 0.001;
   for (int i = 0; i < angles.size(); i++) {
-    angles.set(i, angles.get(i) - gradient.get(i) / lengthOf(gradient) * scale); 
+    angles.set(i, angles.get(i) - gradient.get(i) * scale); 
   }
   
   draw(angles, lengths);
