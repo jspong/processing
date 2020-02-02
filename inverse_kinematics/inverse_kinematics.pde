@@ -91,12 +91,10 @@ void setup() {
   size(640, 480);
   frameRate(24);
   
-  int n = 10;
-  angles = new ArrayList<Float>(n);
-  lengths = new ArrayList<Integer>(n);
-  for (int i = 0; i < n; i++) {
+  lengths = Arrays.asList(10, 20, 30, 40, 50, 60, 50, 20, 20, 30, 10, 30, 40, 5);
+  angles = new ArrayList<Float>(lengths.size());
+  for (int i = 0; i < lengths.size(); i++) {
     angles.add(0f);
-    lengths.add(30);
   }
 }
 
@@ -109,7 +107,7 @@ void draw() {
   
   float distance = e.distanceFrom(calculatePosition(angles, lengths));
   float scale = distance / width * 0.001;
-  for (int i = 0; i < angles.size(); i++) {
+  for (int i = angles.size() - 1; i >= 0; i--) {
     angles.set(i, angles.get(i) - gradient.get(i) * scale); 
   }
   
