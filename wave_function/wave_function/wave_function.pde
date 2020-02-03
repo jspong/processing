@@ -229,7 +229,14 @@ class Collapser {
         return choice_list.get(i); 
       }
     }
-    return choice_list.get(choice_list.size() - 1);
+    return 0;
+  }
+  
+  void renderPixel(int id, color c) {
+     generated.pixels[id] = c;
+     int x = id % w, y = id / w;
+     fill(collapser.generated.pixels[id]);
+     rect(x*size, y*size, size, size);
   }
   
   Visit undo(List<Visit> visits) {
@@ -238,7 +245,8 @@ class Collapser {
       wave.set(v.id, v.patternIds);
       entropy.put(v.id, wave.get(v.id).size() - random(0.1));
     }
-    generated.pixels[visits.get(0).id] = color(255);
+    renderPixel(visits.get(0).id, color(255));
+    
     return visits.get(0);
   }
   
@@ -250,20 +258,18 @@ class Collapser {
       success = collapse(min_entropy(), moves);
     } else {
       while (!visits.isEmpty() && visits.peek().get(0).patternIds.isEmpty()) {
-        List<Visit> last = visits.pop();
-        undo(last);
+        undo(visits.pop());
       }
-      if (visits.isEmpty()) return -1;
+      if (visits.isEmpty()) {
+        success = true;
+        return 0;
+      }
       
-      List<Visit> lastVisits = visits.pop();
-      Visit last = undo(lastVisits);
-      
+      Visit last = undo(visits.pop());
       id = last.id;
-      wave.get(id).remove(last.choice);
-      Set<Integer> remaining = new HashSet<Integer>(wave.get(id));
-      moves.add(new Visit(id, 0, remaining));
-      success = collapse(id, moves);
-      moves.get(0).choice = (int)wave.get(id).iterator().next();
+      if (wave.get(id).size() > 0) {
+        success = collapse(id, moves);
+      }
     }
     visits.push(moves);
     return id;
@@ -288,8 +294,8 @@ class Collapser {
       if (!update(x, y,  0,  1, rules.downs, stack, moves)) return false;
       if (!update(x, y,  0, -1, rules.ups, stack, moves)) return false;
     }
-    
-    generated.pixels[id] = rules.patterns.get(choice).values[4];
+
+    renderPixel(id, rules.patterns.get(choice).values[0]);
     return true;
   }
 }
@@ -305,18 +311,15 @@ void setup() {
   frameRate(10000);
   noStroke();
   
-  props = new ImageProperties(loadImage("Flowers.png"));
+  props = new ImageProperties(loadImage("Platformer.png"));
   collapser = new Collapser(props, width/size, height/size);
 }
 
 void draw() {
   if (collapser.done()) {
-    collapser = new Collapser(props, width/size, height/size);
+    //collapser = new Collapser(props, width/size, height/size);
+    noLoop();
   } else {
     int id = collapser.step();
-    int x = id % collapser.w,
-        y = id / collapser.w;
-    fill(collapser.generated.pixels[id]);
-    rect(x*size, y*size, size, size);
   }
 }
