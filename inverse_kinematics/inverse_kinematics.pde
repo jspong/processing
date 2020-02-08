@@ -274,7 +274,6 @@ void setup() {
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
-  e1.setPosition(0,0);
   float range_of_motion = PI/4;
   float i = 1f;
   for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
