@@ -101,7 +101,7 @@ List<PVector[]> screenCoords(List<Float> angles) {
      rotate(angles.get(i));
      translate(0, -HEIGHT/2);
      PVector[] here = new PVector[4];
-     float margin = 0.1;
+     float margin = 0.05;
      int xMargin = (int)(lengths.get(i) * margin),
          yMargin = (int)(HEIGHT * margin);
      here[0] = screenPoint(xMargin, yMargin);
@@ -185,7 +185,7 @@ void setup() {
   maxAngles = new ArrayList<Float>(n);
   for (int i = 0; i < n; i++) {
     lengths.add(60);
-    float magnitude = PI / 4;
+    float magnitude = PI / 2;
     if (i == 0) {
       minAngles.add(PI*0.75);
       maxAngles.add(PI*1.5);
@@ -214,5 +214,13 @@ void draw() {
   PVector tip = calculatePosition(angles, lengths);
   fill(100, 100, 230);
   circle(tip.x, tip.y, 10);
-  saveFrame("frames/#####.png");
+  translate(-x/2, -y/2);
+  noFill();
+  for (PVector[] shape : screenCoords(angles)) {
+    beginShape();
+    for (PVector v : shape) {
+      vertex(v.x, v.y);
+    }
+    endShape(CLOSE);
+  }
 }
