@@ -29,120 +29,159 @@ class Effector {
   }
 }
 
-int HEIGHT = 20;
+int HEIGHT = 5;
 
-PVector calculatePosition(List<Float> angles, List<Integer> lengths) {
-  PMatrix2D matrix = new PMatrix2D();
-  for (int i = 0; i < angles.size(); i++) {
-    matrix.translate(0, HEIGHT/2);
-    matrix.rotate(angles.get(i));
-    matrix.translate(lengths.get(i), -HEIGHT/2);
+Effector e1 = new Effector(20), e2 = new Effector(20);
+
+class Limb {
+  float angle;
+  final int length;
+  final float minAngle;
+  final float maxAngle;
+  
+  public Limb(int length) {
+    this(length, 0, -2*PI, 2*PI); 
   }
-  return matrix.mult(new PVector(0, HEIGHT/2, 0), null);
+  
+  public Limb(int length, float angle, float minAngle, float maxAngle) {
+    this.angle = angle;
+    this.length = length;
+    this.minAngle = minAngle;
+    this.maxAngle = maxAngle;
+  }
 }
 
-Effector e = new Effector(20);
 
-void updateAngles(List<Float> angles) {
-  List<Float> originalAngles = new ArrayList<Float>(angles);
-  for (int i = angles.size() - 1; i >= 0; i--) {
-    float original = angles.get(i);
-    angles.set(i, original - step / 2);
-    boolean leftCollide = collisions(angles, i);
-    float x1 = e.distanceFrom(calculatePosition(angles, lengths));
-    angles.set(i, original + step / 2);
-    boolean rightCollide = collisions(angles, i);
-    float x2 = e.distanceFrom(calculatePosition(angles, lengths));
-    float gradient = x2 - x1;
-    float recovery = 0.01;
+class Arm {
+  PVector position;
+  List<Integer> lengths;
+  List<Float> angles;
+  List<Float> minAngles;
+  List<Float> maxAngles;
+  Effector effector;
+  float rotation;
+  
+  public Arm(PVector position, List<Integer> lengths, List<Float> angles, List<Float> minAngles, List<Float> maxAngles) {
+    this.position = position;
+    this.lengths = new ArrayList<Integer>(lengths);
+    this.angles = new ArrayList<Float>(angles);
+    this.minAngles = new ArrayList<Float>(minAngles);
+    this.maxAngles = new ArrayList<Float>(maxAngles);
+  }
+  
+  PVector calculatePosition() {
+    PMatrix2D matrix = new PMatrix2D();
+    matrix.translate(position.x, position.y);
+    for (int i = 0; i < angles.size(); i++) {
+      matrix.translate(0, HEIGHT/2);
+      matrix.rotate(angles.get(i));
+      matrix.translate(lengths.get(i), -HEIGHT/2);
+    }
+    return matrix.mult(new PVector(0, HEIGHT/2, 0), null);
+  }
 
-    if (gradient > 0 && leftCollide) {
-      angles.set(i, original + recovery);
-    } else if (gradient < 0 && rightCollide) {
-      angles.set(i, original - recovery);
-    } else { 
-      angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
+  void updateAngles() {
+    List<Float> originalAngles = new ArrayList<Float>(angles);
+    for (int i = angles.size() - 1; i >= 0; i--) {
+      float original = angles.get(i);
+      angles.set(i, original - step / 2);
+      boolean leftCollide = collisions(i);
+      float x1 = effector.distanceFrom(calculatePosition());
+      angles.set(i, original + step / 2);
+      boolean rightCollide = collisions(i);
+      float x2 = effector.distanceFrom(calculatePosition());
+      float gradient = x2 - x1;
+      float recovery = 0.01;
+  
+      if (gradient > 0 && leftCollide) {
+        angles.set(i, original + recovery);
+      } else if (gradient < 0 && rightCollide) {
+        angles.set(i, original - recovery);
+      } else { 
+        angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
+      }
+    }
+    float originalDistance = effector.distanceFrom(calculatePosition()),
+          newDistance = effector.distanceFrom(calculatePosition()),
+          resolution = 0.00001;
+    if (originalDistance - newDistance < -resolution) {
+       for (int i = 0; i < angles.size(); i++) {
+         angles.set(i, originalAngles.get(i));
+       }
     }
   }
-  float originalDistance = e.distanceFrom(calculatePosition(originalAngles, lengths)),
-        newDistance = e.distanceFrom(calculatePosition(angles, lengths)),
-        resolution = 0.00001;
-  if (originalDistance - newDistance < -resolution) {
-     for (int i = 0; i < angles.size(); i++) {
-       angles.set(i, originalAngles.get(i));
-     }
+  
+  List<PVector[]> screenCoords() {
+    pushMatrix();
+    List<PVector[]> coords = new ArrayList<PVector[]>(angles.size());
+    for (int i = 0; i < angles.size(); i++) {
+       translate(0, HEIGHT/2);
+       rotate(angles.get(i));
+       translate(0, -HEIGHT/2);
+       PVector[] here = new PVector[4];
+       float margin = 0.1;
+       int xMargin = (int)(lengths.get(i) * margin),
+           yMargin = (int)(HEIGHT * margin);
+       here[0] = screenPoint(xMargin, yMargin);
+       here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
+       here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
+       here[3] = screenPoint(xMargin, HEIGHT - yMargin);
+       coords.add(here);
+       translate(lengths.get(i), 0);
+    }
+    popMatrix();
+    return coords;
   }
-}
 
-boolean collisions(List<Float> angles, int i) {
-  List<PVector[]> coords = screenCoords(angles);
-  for (int j = 0; j < coords.size(); j++) {
-    if (abs(i-j) < 2) continue;
-      if (polyPoly(coords.get(i), coords.get(j))) {
-        return true;
+  boolean collisions(int i) {
+    List<PVector[]> coords = screenCoords();
+    for (int j = 0; j < coords.size(); j++) {
+      if (abs(i-j) < 2) continue;
+        if (polyPoly(coords.get(i), coords.get(j))) {
+          return true;
+        }
+    }
+    return false;
+  }
+  
+  void draw() {
+    pushMatrix();
+    List<PVector[]> screen_coordinates = screenCoords();
+    pushStyle();
+    fill(255);
+    int[] collisions = new int[screen_coordinates.size()];
+    for (int i = 0; i < collisions.length; i++) {
+      collisions[i] = 0; 
+    }
+    for (int i = 0; i < collisions.length; i++) {
+      for (int j = i + 1; j < collisions.length; j++) {
+         if (polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
+           collisions[i]++;
+           collisions[j]++;
+         }
       }
+    }
+    translate(position.x, position.y);
+    for (int i = 0; i < angles.size(); i++) {
+      translate(0, HEIGHT/2);
+      rotate(angles.get(i));
+      translate(0, -HEIGHT/2);
+      float t = (float)collisions[i] / collisions.length;
+      fill(color(lerp(255,200,t), lerp(255, 20,t), lerp(255, 140, t)));
+      ellipse(lengths.get(i)/2, HEIGHT/2, lengths.get(i), HEIGHT);
+      translate(lengths.get(i), 0);
+    }
+    popStyle();
+    popMatrix();
   }
-  return false;
-}
 
+}
 float lengthOf(List<Float> vector) {
    float size = 0;
    for (int i = 0; i < vector.size(); i++) {
       size += vector.get(i) * vector.get(i); 
    }
    return sqrt(size);
-}
-
-void draw(List<Float> angles, List<Integer> lengths) {
-  pushMatrix();
-  List<PVector[]> screen_coordinates = screenCoords(angles);
-  pushStyle();
-  fill(255);
-  int[] collisions = new int[screen_coordinates.size()];
-  for (int i = 0; i < collisions.length; i++) {
-    collisions[i] = 0; 
-  }
-  for (int i = 0; i < collisions.length; i++) {
-    for (int j = i + 1; j < collisions.length; j++) {
-       if (polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
-         collisions[i]++;
-         collisions[j]++;
-       }
-    }
-  }
-  for (int i = 0; i < angles.size(); i++) {
-    translate(0, HEIGHT/2);
-    rotate(angles.get(i));
-    translate(0, -HEIGHT/2);
-    float t = (float)collisions[i] / collisions.length;
-    fill(color(lerp(255,200,t), lerp(255, 20,t), lerp(255, 140, t)));
-    ellipse(lengths.get(i)/2, HEIGHT/2, lengths.get(i), HEIGHT);
-    translate(lengths.get(i), 0);
-  }
-  popStyle();
-  popMatrix(); 
-}
-
-List<PVector[]> screenCoords(List<Float> angles) {
-  pushMatrix();
-  List<PVector[]> coords = new ArrayList<PVector[]>(angles.size());
-  for (int i = 0; i < angles.size(); i++) {
-     translate(0, HEIGHT/2);
-     rotate(angles.get(i));
-     translate(0, -HEIGHT/2);
-     PVector[] here = new PVector[4];
-     float margin = 0.1;
-     int xMargin = (int)(lengths.get(i) * margin),
-         yMargin = (int)(HEIGHT * margin);
-     here[0] = screenPoint(xMargin, yMargin);
-     here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
-     here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
-     here[3] = screenPoint(xMargin, HEIGHT - yMargin);
-     coords.add(here);
-     translate(lengths.get(i), 0);
-  }
-  popMatrix();
-  return coords;
 }
 
 boolean polyPoly(PVector[] p1, PVector[] p2) {
@@ -198,23 +237,18 @@ PVector screenPoint(int x, int y) {
   return new PVector(screenX(x, y), screenY(x, y)); 
 }
 
-List<Float> angles;
-List<Integer> lengths;
-List<Float> minAngles;
-List<Float> maxAngles;
 float step = 0.09;
-
+List<Arm> arms;
 void setup() {
   size(640, 480);
   frameRate(24);
   
-  lengths = Arrays.asList(10, 20, 30, 40, 30, 30, 30, 20, 20, 30, 10, 30, 30, 5);
-  int n = 30;
-  lengths = new ArrayList<Integer>(n);
-  minAngles = new ArrayList<Float>(n);
-  maxAngles = new ArrayList<Float>(n);
+  int n = 4;
+  List<Integer> lengths = new ArrayList<Integer>(n);
+  List<Float> minAngles = new ArrayList<Float>(n);
+  List<Float> maxAngles = new ArrayList<Float>(n);
   for (int i = 0; i < n; i++) {
-    lengths.add(400 / n);
+    lengths.add(200 / n + 20 * i);
     float magnitude = 3 *
     PI / 2;
     if (i == 0) {
@@ -225,22 +259,40 @@ void setup() {
       maxAngles.add(magnitude);
     }
   }
-  angles = new ArrayList<Float>(lengths.size());
+  List<Float> angles = new ArrayList<Float>(lengths.size());
   for (int i = 0; i < lengths.size(); i++) {
     angles.add(0f);
+  }
+  int num_arms = 8;
+  arms = new ArrayList<Arm>(num_arms);
+  e1.setPosition(50, height / 2);
+  e2.setPosition(width - 50, height / 2);
+  for (int i = 0; i < num_arms / 2; i++) {
+    angles.set(1, (1.5-i) * PI / 8);
+    Arm leftArm = new Arm(new PVector(-40, (i-1.5) * 100, 0), lengths, angles, minAngles, maxAngles);
+    angles.set(1, (i-1.5) * PI / 8);
+    leftArm.rotation = PI;
+    Arm rightArm = new Arm(new PVector(40, (i-1.5) * 100, 0), lengths, angles, minAngles, maxAngles);
+    leftArm.effector = e1;
+    rightArm.effector = e2;
+    arms.add(leftArm);
+    arms.add(rightArm);
   }
 }
 
 void draw() {
   background(140, 200, 100);
   int x = width / 2, y = height / 2;
-  e.setPosition(mouseX-x, mouseY-y);
+  e1.setPosition(50-mouseX, mouseY-y);
+  e2.setPosition(mouseX-50, mouseY-y);
   translate(x, y);
-  updateAngles(angles);
-  draw(angles, lengths);
-  e.draw();
-  PVector tip = calculatePosition(angles, lengths);
+  for (Arm arm : arms) {
+    arm.updateAngles();
+    arm.draw();
+  PVector tip = arm.calculatePosition();
   fill(100, 100, 230);
   circle(tip.x, tip.y, 10);
-
+  }
+  e1.draw();
+  e2.draw();
 }
