@@ -10,6 +10,11 @@ class Effector {
     _size = size;
   }
   
+  void setPosition(PVector position) {
+    _x = (int)position.x;
+    _y = (int)position.y;
+  } 
+  
   void setPosition(int x, int y) {
     _x = x;
     _y = y;
@@ -29,29 +34,6 @@ class Effector {
   }
 }
 
-int HEIGHT = 5;
-
-Effector e1 = new Effector(20), e2 = new Effector(20);
-
-class Limb {
-  float angle;
-  final int length;
-  final float minAngle;
-  final float maxAngle;
-  
-  public Limb(int length) {
-    this(length, 0, -2*PI, 2*PI); 
-  }
-  
-  public Limb(int length, float angle, float minAngle, float maxAngle) {
-    this.angle = angle;
-    this.length = length;
-    this.minAngle = minAngle;
-    this.maxAngle = maxAngle;
-  }
-}
-
-
 class Arm {
   PVector position;
   List<Integer> lengths;
@@ -59,7 +41,6 @@ class Arm {
   List<Float> minAngles;
   List<Float> maxAngles;
   Effector effector;
-  float rotation;
   
   public Arm(PVector position, List<Integer> lengths, List<Float> angles, List<Float> minAngles, List<Float> maxAngles) {
     this.position = position;
@@ -67,6 +48,9 @@ class Arm {
     this.angles = new ArrayList<Float>(angles);
     this.minAngles = new ArrayList<Float>(minAngles);
     this.maxAngles = new ArrayList<Float>(maxAngles);
+    effector = new Effector(10);
+    PVector end_position = calculatePosition();
+    effector.setPosition((int)end_position.x, (int)end_position.y);
   }
   
   PVector calculatePosition() {
@@ -86,17 +70,26 @@ class Arm {
       float original = angles.get(i);
       angles.set(i, original - step / 2);
       boolean leftCollide = collisions(i);
+      for (Arm arm : arms) {
+        if (leftCollide) break;
+        leftCollide = collisions(arm);
+      }
       float x1 = effector.distanceFrom(calculatePosition());
       angles.set(i, original + step / 2);
       boolean rightCollide = collisions(i);
+      for (Arm arm : arms) {
+        if (rightCollide) break;
+        rightCollide = collisions(arm);
+      }
       float x2 = effector.distanceFrom(calculatePosition());
       float gradient = x2 - x1;
       float recovery = 0.01;
   
+      float offset = gradient * 0.005 * recovery;
       if (gradient > 0 && leftCollide) {
-        angles.set(i, original + recovery);
+        angles.set(i, original - offset);
       } else if (gradient < 0 && rightCollide) {
-        angles.set(i, original - recovery);
+        angles.set(i, original + offset);
       } else { 
         angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
       }
@@ -114,6 +107,7 @@ class Arm {
   List<PVector[]> screenCoords() {
     pushMatrix();
     List<PVector[]> coords = new ArrayList<PVector[]>(angles.size());
+    translate(position.x, position.y);
     for (int i = 0; i < angles.size(); i++) {
        translate(0, HEIGHT/2);
        rotate(angles.get(i));
@@ -140,6 +134,22 @@ class Arm {
         if (polyPoly(coords.get(i), coords.get(j))) {
           return true;
         }
+    }
+    return false;
+  }
+  
+  boolean collisions(Arm other) {
+    if (other == this) {
+      return false;
+    }
+    List<PVector[]> myCoords = screenCoords();
+    List<PVector[]> theirCoords = other.screenCoords();
+    for (PVector[] a : myCoords) {
+      for (PVector[] b : theirCoords) {
+        if (polyPoly(a, b)) {
+          return true;
+        }
+      }
     }
     return false;
   }
@@ -237,62 +247,86 @@ PVector screenPoint(int x, int y) {
   return new PVector(screenX(x, y), screenY(x, y)); 
 }
 
+int HEIGHT = 4;
+
+int num_arms = 16; 
 float step = 0.09;
 List<Arm> arms;
+List<PVector> effector_origins;
+
 void setup() {
-  size(640, 480);
+  size(1280, 1024);
   frameRate(24);
   
-  int n = 4;
-  List<Integer> lengths = new ArrayList<Integer>(n);
+  List<Integer> lengths = Arrays.asList(10, 40, 40, 20);
+  int n = lengths.size();
   List<Float> minAngles = new ArrayList<Float>(n);
   List<Float> maxAngles = new ArrayList<Float>(n);
   for (int i = 0; i < n; i++) {
-    lengths.add(200 / n + 20 * i);
-    float magnitude = 3 *
-    PI / 2;
-    if (i == 0) {
-      minAngles.add(PI*0.75);
-      maxAngles.add(PI*1.5);
-    } else {
-      minAngles.add(-magnitude);
-      maxAngles.add(magnitude);
-    }
+    float magnitude = PI;
+    minAngles.add(-magnitude);
+    maxAngles.add(magnitude);
   }
   List<Float> angles = new ArrayList<Float>(lengths.size());
   for (int i = 0; i < lengths.size(); i++) {
     angles.add(0f);
   }
-  int num_arms = 8;
+  int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
-  e1.setPosition(50, height / 2);
-  e2.setPosition(width - 50, height / 2);
-  for (int i = 0; i < num_arms / 2; i++) {
-    angles.set(1, (1.5-i) * PI / 8);
-    Arm leftArm = new Arm(new PVector(-40, (i-1.5) * 100, 0), lengths, angles, minAngles, maxAngles);
-    angles.set(1, (i-1.5) * PI / 8);
-    leftArm.rotation = PI;
-    Arm rightArm = new Arm(new PVector(40, (i-1.5) * 100, 0), lengths, angles, minAngles, maxAngles);
-    leftArm.effector = e1;
-    rightArm.effector = e2;
-    arms.add(leftArm);
-    arms.add(rightArm);
-  }
+  effector_origins = new ArrayList<PVector>(num_arms);
+  e1.setPosition(0,0);
+  float range_of_motion = PI/4;
+  float i = 1f;
+  for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
+    float start_angle = angle - 2 * PI;
+    angles.set(0, start_angle);
+    minAngles.set(0, start_angle - range_of_motion * i / num_arms);
+    maxAngles.set(0, start_angle + range_of_motion * i / num_arms);
+    i++;
+    float circleX = radius * cos(angle),
+          circleY = radius * sin(angle);
+    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths, angles, minAngles, maxAngles);
+    PVector origin = arm.calculatePosition();
+    origin.mult(1.2);
+    origin.sub(0, 20);
+    arm.effector.setPosition(origin);
+    effector_origins.add(origin);
+    arms.add(arm);
+  } 
+  spider_position = new PVector(width / 2, height / 2, 0);
+  spider_forwards = up.copy();
 }
 
+int frame = 0;
+float period = 50f;
+float step_length = 20;
+float spider_speed = 5f;
+
+PVector spider_position;
+PVector spider_forwards;
+PVector up = new PVector(0,1,0);
+
 void draw() {
-  background(140, 200, 100);
-  int x = width / 2, y = height / 2;
-  e1.setPosition(50-mouseX, mouseY-y);
-  e2.setPosition(mouseX-50, mouseY-y);
-  translate(x, y);
-  for (Arm arm : arms) {
+  background(20, 200, 220);
+  translate(spider_position.x, spider_position.y);
+  int sign = spider_forwards.x < 0 ? 1 : -1;
+  rotate(sign * PVector.angleBetween(up, spider_forwards));
+  ellipse(0, 4, 40, 80);
+  for (int i = 0; i < arms.size(); i++) {
+    Arm arm = arms.get(i);
+    PVector origin = effector_origins.get(i).copy();
+    origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
+    origin.add(step_length * cos(frame / period), 0);
+    arm.effector.setPosition(origin);
     arm.updateAngles();
     arm.draw();
-  PVector tip = arm.calculatePosition();
-  fill(100, 100, 230);
-  circle(tip.x, tip.y, 10);
   }
-  e1.draw();
-  e2.draw();
+  PVector direction = new PVector(mouseX - spider_position.x, mouseY - spider_position.y, 0f);
+  float distance = direction.mag();
+  direction.normalize();
+  if (distance >= 40) {
+    spider_forwards = direction.copy();
+    direction.mult(min(distance, spider_speed));
+    spider_position.add(direction);
+  }
 }
