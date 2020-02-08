@@ -249,7 +249,7 @@ PVector screenPoint(int x, int y) {
 
 int HEIGHT = 4;
 
-int num_arms = 16; 
+int num_arms = 8; 
 float step = 0.09;
 List<Arm> arms;
 List<PVector> effector_origins;
@@ -260,13 +260,9 @@ void setup() {
   
   List<Integer> lengths = Arrays.asList(10, 40, 40, 20);
   int n = lengths.size();
-  List<Float> minAngles = new ArrayList<Float>(n);
-  List<Float> maxAngles = new ArrayList<Float>(n);
-  for (int i = 0; i < n; i++) {
-    float magnitude = PI;
-    minAngles.add(-magnitude);
-    maxAngles.add(magnitude);
-  }
+  List<Float> minAngles = Arrays.asList(0f, -45f * PI/180, -100f * PI/180, -40f*PI/180);
+  List<Float> maxAngles = Arrays.asList(0f, -10f * PI/180, -20f * PI/180, -10f*PI/180);
+
   List<Float> angles = new ArrayList<Float>(lengths.size());
   for (int i = 0; i < lengths.size(); i++) {
     angles.add(0f);
@@ -274,20 +270,35 @@ void setup() {
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
-  float range_of_motion = PI/4;
+  float range_of_motion = PI / 4;
   float i = 1f;
+
   for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
     float start_angle = angle - 2 * PI;
     angles.set(0, start_angle);
-    minAngles.set(0, start_angle - range_of_motion * i / num_arms);
-    maxAngles.set(0, start_angle + range_of_motion * i / num_arms);
+    List<Float> temp_minAngles = new ArrayList<Float>(minAngles.size());
+    List<Float> temp_maxAngles = new ArrayList<Float>(maxAngles.size());
+    temp_minAngles.add(start_angle - range_of_motion);
+    temp_maxAngles.add(start_angle + range_of_motion);
+   
+    boolean onLeft = angle > PI / 2 && angle < 3 * PI / 2;
+    for (int j = 1; j < minAngles.size(); j++) {
+      if (onLeft) {
+        temp_minAngles.add(-maxAngles.get(j));
+        temp_maxAngles.add(-minAngles.get(j));
+      } else {
+        temp_minAngles.add(minAngles.get(j));
+        temp_maxAngles.add(maxAngles.get(j));
+      }
+    }
     i++;
     float circleX = radius * cos(angle),
           circleY = radius * sin(angle);
-    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths, angles, minAngles, maxAngles);
+    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths, angles, temp_minAngles, temp_maxAngles);
     PVector origin = arm.calculatePosition();
     origin.mult(1.2);
     origin.sub(0, 20);
+    origin.add(10 * cos(angle), 10 * sin(angle));
     arm.effector.setPosition(origin);
     effector_origins.add(origin);
     arms.add(arm);
@@ -318,6 +329,7 @@ void draw() {
     origin.add(step_length * cos(frame / period), 0);
     arm.effector.setPosition(origin);
     arm.updateAngles();
+    arm.effector.draw();
     arm.draw();
   }
   PVector direction = new PVector(mouseX - spider_position.x, mouseY - spider_position.y, 0f);
