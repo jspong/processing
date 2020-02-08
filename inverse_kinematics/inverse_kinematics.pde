@@ -51,7 +51,7 @@ void updateAngles(List<Float> angles) {
     angles.set(i, original + step / 2);
     float x2 = e.distanceFrom(calculatePosition(angles, lengths));
     float gradient = x2 - x1;
-    angles.set(i, original - gradient * 0.005);
+    angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
   }
 }
 
@@ -101,7 +101,7 @@ List<PVector[]> screenCoords(List<Float> angles) {
      rotate(angles.get(i));
      translate(0, -HEIGHT/2);
      PVector[] here = new PVector[4];
-     float margin = 0.2;
+     float margin = 0.1;
      int xMargin = (int)(lengths.get(i) * margin),
          yMargin = (int)(HEIGHT * margin);
      here[0] = screenPoint(xMargin, yMargin);
@@ -170,6 +170,8 @@ PVector screenPoint(int x, int y) {
 
 List<Float> angles;
 List<Integer> lengths;
+List<Float> minAngles;
+List<Float> maxAngles;
 float step = 0.09;
 
 void setup() {
@@ -177,6 +179,24 @@ void setup() {
   frameRate(24);
   
   lengths = Arrays.asList(10, 20, 30, 40, 30, 30, 30, 20, 20, 30, 10, 30, 30, 5);
+  int n = 5;
+  lengths = new ArrayList<Integer>(n);
+  minAngles = new ArrayList<Float>(n);
+  maxAngles = new ArrayList<Float>(n);
+  for (int i = 0; i < n; i++) {
+    lengths.add(60);
+    float magnitude = PI / 4;
+    if (i == 0) {
+      minAngles.add(PI*0.75);
+      maxAngles.add(PI*1.5);
+    } else if (i % 2 == 0) {
+      minAngles.add(-magnitude/2);
+      maxAngles.add(magnitude);
+    } else {
+      minAngles.add(-magnitude);
+      maxAngles.add(magnitude/2);
+    }
+  }
   angles = new ArrayList<Float>(lengths.size());
   for (int i = 0; i < lengths.size(); i++) {
     angles.add(0f);
