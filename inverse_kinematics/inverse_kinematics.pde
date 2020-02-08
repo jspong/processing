@@ -86,7 +86,7 @@ void draw(List<Float> angles, List<Integer> lengths) {
     translate(0, -HEIGHT/2);
     float t = (float)collisions[i] / collisions.length;
     fill(color(lerp(255,200,t), lerp(255, 20,t), lerp(255, 140, t)));
-    rect(0, 0, lengths.get(i), HEIGHT);
+    ellipse(lengths.get(i)/2, HEIGHT/2, lengths.get(i), HEIGHT);
     translate(lengths.get(i), 0);
   }
   popStyle();
