@@ -43,21 +43,16 @@ PVector calculatePosition(List<Float> angles, List<Integer> lengths) {
 
 Effector e = new Effector(20);
 
-List<Float> calculateGradient(List<Float> angles, List<Integer> lengths) {
-  List<Float> gradient = new ArrayList<Float>(angles.size());
-  for (int i = 0; i < angles.size(); i++) {
+void updateAngles(List<Float> angles) {
+  for (int i = angles.size() - 1; i >= 0; i--) {
     float original = angles.get(i);
-    
     angles.set(i, original - step / 2);
     float x1 = e.distanceFrom(calculatePosition(angles, lengths));
-    
     angles.set(i, original + step / 2);
     float x2 = e.distanceFrom(calculatePosition(angles, lengths));
-    
-    angles.set(i, original);
-    gradient.add((x2 - x1) / step);
+    float gradient = x2 - x1;
+    angles.set(i, original - gradient * 0.005);
   }
-  return gradient;
 }
 
 float lengthOf(List<Float> vector) {
@@ -93,7 +88,7 @@ void draw(List<Float> angles, List<Integer> lengths) {
     fill(color(lerp(255,200,t), lerp(255, 20,t), lerp(255, 140, t)));
     rect(0, 0, lengths.get(i), HEIGHT);
     translate(lengths.get(i), 0);
-  }  
+  }
   popStyle();
   popMatrix(); 
 }
@@ -106,10 +101,13 @@ List<PVector[]> screenCoords(List<Float> angles) {
      rotate(angles.get(i));
      translate(0, -HEIGHT/2);
      PVector[] here = new PVector[4];
-     here[0] = screenPoint(0, 0);
-     here[1] = screenPoint(lengths.get(i), 0);
-     here[2] = screenPoint(lengths.get(i), HEIGHT);
-     here[3] = screenPoint(0, HEIGHT);
+     float margin = 0.2;
+     int xMargin = (int)(lengths.get(i) * margin),
+         yMargin = (int)(HEIGHT * margin);
+     here[0] = screenPoint(xMargin, yMargin);
+     here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
+     here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
+     here[3] = screenPoint(xMargin, HEIGHT - yMargin);
      coords.add(here);
      translate(lengths.get(i), 0);
   }
@@ -190,18 +188,11 @@ void draw() {
   int x = width / 2, y = height / 2;
   e.setPosition(mouseX-x, mouseY-y);
   translate(x, y);
-  List<Float> gradient = calculateGradient(angles, lengths);
-  
-  float distance = e.distanceFrom(calculatePosition(angles, lengths));
-  float scale = distance / width * 0.001;
-  for (int i = angles.size() - 1; i >= 0; i--) {
-    angles.set(i, angles.get(i) - gradient.get(i) * scale); 
-  }
-  
+  updateAngles(angles);
   draw(angles, lengths);
   e.draw();
-  
   PVector tip = calculatePosition(angles, lengths);
   fill(100, 100, 230);
   circle(tip.x, tip.y, 10);
+  saveFrame("frames/#####.png");
 }
