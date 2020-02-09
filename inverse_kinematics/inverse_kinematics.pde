@@ -277,53 +277,63 @@ float step = 0.09;
 List<Arm> arms;
 List<PVector> effector_origins;
 
+float rad(float degrees) {
+  return degrees * PI / 180; 
+}
+
 void setup() {
   size(1280, 1024);
   frameRate(24);
   
   List<List<Integer>> lengths = Arrays.asList(
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20),
-    Arrays.asList(10, 40, 40, 20)
+    Arrays.asList(20, 10, 20, 10),  // left front leg
+    Arrays.asList(30, 30, 30, 30),  // left antenna
+    Arrays.asList(30, 30, 30, 30),  // right antenna
+    Arrays.asList(20, 10, 20, 10),  // right front leg
+    Arrays.asList(20, 10, 20, 10),  // right rear leg
+    Arrays.asList(10, 40, 30, 20),  // right tail
+    Arrays.asList(10, 40, 30, 20),  // left tail
+    Arrays.asList(10, 20, 20, 20)   // left rear leg
   );
-  List<Float> minAngles = Arrays.asList(0f, -45f * PI/180, -100f * PI/180, -40f*PI/180);
-  List<Float> maxAngles = Arrays.asList(0f, -10f * PI/180, -20f * PI/180, -10f*PI/180);
-
-  List<Float> angles = new ArrayList<Float>(lengths.size());
-  for (int i = 0; i < lengths.get(0).size(); i++) {
-    angles.add(0f);
-  }
+  List<List<Float>> angles = Arrays.asList(
+    Arrays.asList(rad(15), 0f, 0f, 0f),
+    Arrays.asList(rad(65), 0f, 0f, 0f),
+    Arrays.asList(rad(115), 0f, 0f, 0f),
+    Arrays.asList(rad(165), 0f, 0f, 0f),
+    Arrays.asList(-rad(165), 0f, 0f, 0f),
+    Arrays.asList(-rad(100), 0f, 0f, 0f),
+    Arrays.asList(-rad(80), 0f, 0f, 0f),
+    Arrays.asList(-rad(15), 0f, 0f, 0f)
+  );
+  List<List<Float>> minAngles = Arrays.asList(
+    Arrays.asList(rad(0), -PI, -PI, -PI),
+    Arrays.asList(rad(60), -PI, -PI, -PI),
+    Arrays.asList(rad(110), -PI, -PI, -PI),
+    Arrays.asList(rad(150), -PI, -PI, -PI),
+    Arrays.asList(-rad(180), -PI, -PI, -PI),
+    Arrays.asList(-rad(110), -PI, -PI, -PI),
+    Arrays.asList(-rad(120), -PI, -PI, -PI),
+    Arrays.asList(-rad(180), -PI, -PI, -PI)
+  );
+  List<List<Float>> maxAngles = Arrays.asList(
+    Arrays.asList(rad(20), PI, PI, PI),
+    Arrays.asList(rad(75), PI, PI, PI),
+    Arrays.asList(rad(125), PI, PI, PI),
+    Arrays.asList(rad(165), PI, PI, PI),
+    Arrays.asList(-rad(150), PI, PI, PI),
+    Arrays.asList(-rad(50), PI, PI, PI),
+    Arrays.asList(-rad(80), PI, PI, PI),
+    Arrays.asList(-rad(20), PI, PI, PI)
+  );
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
-  float range_of_motion = PI / 4;
   int i = 0;
   for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
-    float start_angle = angle - 2 * PI;
-    angles.set(0, start_angle);
-    List<Float> temp_minAngles = new ArrayList<Float>(minAngles.size());
-    List<Float> temp_maxAngles = new ArrayList<Float>(maxAngles.size());
-    temp_minAngles.add(start_angle - range_of_motion);
-    temp_maxAngles.add(start_angle + range_of_motion);
-   
-    boolean onLeft = angle > PI / 2 && angle < 3 * PI / 2;
-    for (int j = 1; j < minAngles.size(); j++) {
-      if (onLeft) {
-        temp_minAngles.add(-maxAngles.get(j));
-        temp_maxAngles.add(-minAngles.get(j));
-      } else {
-        temp_minAngles.add(minAngles.get(j));
-        temp_maxAngles.add(maxAngles.get(j));
-      }
-    }
     float circleX = radius * cos(angle),
           circleY = radius * sin(angle);
-    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths.get(i++), angles, temp_minAngles, temp_maxAngles);
+    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths.get(i), angles.get(i), minAngles.get(i), maxAngles.get(i));
+    i++;
     PVector origin = arm.calculatePosition();
     origin.mult(1.2);
     origin.sub(0, 20);
@@ -354,6 +364,8 @@ void mouseClicked() {
 float effector_gravity = 300;
 
 int captured_arms = 0;
+int max_captures = 4;
+
 void draw() {
   background(20, 200, 220);
   pushMatrix();
@@ -361,13 +373,10 @@ void draw() {
   int sign = spider_forwards.x < 0 ? 1 : -1;
   rotate(sign * PVector.angleBetween(up, spider_forwards));
   ellipse(0, 4, 40, 80);
-  int max_captures = 3;
   for (int i = 0; i < arms.size(); i++) {
     Arm arm = arms.get(i);
     PVector end_position = arm.calculatePosition();
-    if (i == 0) print(end_position.x + " " + end_position.y + "\n");
     float distance = target.distanceFrom(end_position);
-    if (i == 0) print(distance + "\n");
     if (distance < effector_gravity && arm.effector != target) {
       if (captured_arms < max_captures) {
         arm.pushEffector(target);
@@ -388,7 +397,7 @@ void draw() {
   }
   popMatrix();
   for (Arm arm : arms) {
-    arm.effector.draw(); 
+    //arm.effector.draw(); 
   }
   pushMatrix();
   target.draw();
