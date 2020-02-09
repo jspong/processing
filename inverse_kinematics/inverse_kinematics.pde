@@ -281,20 +281,28 @@ void setup() {
   size(1280, 1024);
   frameRate(24);
   
-  List<Integer> lengths = Arrays.asList(10, 40, 40, 20);
-  int n = lengths.size();
+  List<List<Integer>> lengths = Arrays.asList(
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20),
+    Arrays.asList(10, 40, 40, 20)
+  );
   List<Float> minAngles = Arrays.asList(0f, -45f * PI/180, -100f * PI/180, -40f*PI/180);
   List<Float> maxAngles = Arrays.asList(0f, -10f * PI/180, -20f * PI/180, -10f*PI/180);
 
   List<Float> angles = new ArrayList<Float>(lengths.size());
-  for (int i = 0; i < lengths.size(); i++) {
+  for (int i = 0; i < lengths.get(0).size(); i++) {
     angles.add(0f);
   }
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
   float range_of_motion = PI / 4;
-
+  int i = 0;
   for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
     float start_angle = angle - 2 * PI;
     angles.set(0, start_angle);
@@ -315,7 +323,7 @@ void setup() {
     }
     float circleX = radius * cos(angle),
           circleY = radius * sin(angle);
-    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths, angles, temp_minAngles, temp_maxAngles);
+    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths.get(i++), angles, temp_minAngles, temp_maxAngles);
     PVector origin = arm.calculatePosition();
     origin.mult(1.2);
     origin.sub(0, 20);
@@ -343,7 +351,7 @@ void mouseClicked() {
  target.setPosition(mouseX, mouseY);
 }
 
-float effector_gravity = 100;
+float effector_gravity = 300;
 
 int captured_arms = 0;
 void draw() {
