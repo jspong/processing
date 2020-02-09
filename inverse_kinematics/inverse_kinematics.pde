@@ -4,32 +4,31 @@ import java.util.ArrayList;
 
 class Effector {
   
-  private int _x, _y, _size;
+  PVector position;
+  private int _size;
   
   Effector(int size) {
     _size = size;
   }
   
   void setPosition(PVector position) {
-    _x = (int)position.x;
-    _y = (int)position.y;
+    this.position = position.copy();
   } 
   
   void setPosition(int x, int y) {
-    _x = x;
-    _y = y;
+    setPosition(new PVector(x, y));
   }
   
   float distanceFrom(PVector point) {
-    float a = point.x - _x;
-    float b = point.y - _y;
-    return sqrt(a * a + b * b);
+    point = point.copy();
+    point.sub(position);
+    return point.mag();
   }
   
   void draw() {
     pushStyle();
     fill(200, 0, 0);
-    circle(_x, _y, _size);
+    circle(position.x, position.y, _size);
     popStyle();
   }
 }
@@ -41,6 +40,7 @@ class Arm {
   List<Float> minAngles;
   List<Float> maxAngles;
   Effector effector;
+  Effector lastEffector;
   
   public Arm(PVector position, List<Integer> lengths, List<Float> angles, List<Float> minAngles, List<Float> maxAngles) {
     this.position = position;
@@ -53,6 +53,16 @@ class Arm {
     effector.setPosition((int)end_position.x, (int)end_position.y);
   }
   
+  void pushEffector(Effector e) {
+    lastEffector = effector;
+    effector = e;
+  }
+  
+  void popEffector() {
+    effector = lastEffector;
+    lastEffector = null;
+  }
+  
   PVector calculatePosition() {
     PMatrix2D matrix = new PMatrix2D();
     matrix.translate(position.x, position.y);
@@ -61,7 +71,7 @@ class Arm {
       matrix.rotate(angles.get(i));
       matrix.translate(lengths.get(i), -HEIGHT/2);
     }
-    return matrix.mult(new PVector(0, HEIGHT/2, 0), null);
+    return screenPoint(matrix.mult(new PVector(0, HEIGHT/2, 0), null));
   }
 
   void updateAngles() {
@@ -84,7 +94,7 @@ class Arm {
       float x2 = effector.distanceFrom(calculatePosition());
       float gradient = x2 - x1;
       float recovery = 0.01;
-  
+      
       float offset = gradient * 0.005 * recovery;
       if (gradient > 0 && leftCollide) {
         angles.set(i, original - offset);
@@ -106,6 +116,7 @@ class Arm {
   
   List<PVector[]> screenCoords() {
     pushMatrix();
+    resetMatrix();
     List<PVector[]> coords = new ArrayList<PVector[]>(angles.size());
     translate(position.x, position.y);
     for (int i = 0; i < angles.size(); i++) {
@@ -181,8 +192,21 @@ class Arm {
       ellipse(lengths.get(i)/2, HEIGHT/2, lengths.get(i), HEIGHT);
       translate(lengths.get(i), 0);
     }
+    
     popStyle();
     popMatrix();
+    
+    boolean boundingBoxes = true;
+    if (boundingBoxes) {
+      for (PVector[] shape : screen_coordinates) {
+        beginShape();
+        vertex(shape[0].x, shape[0].y);
+        vertex(shape[1].x, shape[1].y);
+        vertex(shape[2].x, shape[2].y);
+        vertex(shape[3].x, shape[3].y);
+        endShape(CLOSE);
+      }
+    }
   }
 
 }
@@ -247,6 +271,10 @@ PVector screenPoint(int x, int y) {
   return new PVector(screenX(x, y), screenY(x, y)); 
 }
 
+PVector screenPoint(PVector p) {
+  return new PVector(screenX(p.x, p.y), screenY(p.x, p.y)); 
+}
+
 int HEIGHT = 4;
 
 int num_arms = 8; 
@@ -271,7 +299,6 @@ void setup() {
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
   float range_of_motion = PI / 4;
-  float i = 1f;
 
   for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
     float start_angle = angle - 2 * PI;
@@ -291,7 +318,6 @@ void setup() {
         temp_maxAngles.add(maxAngles.get(j));
       }
     }
-    i++;
     float circleX = radius * cos(angle),
           circleY = radius * sin(angle);
     Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths, angles, temp_minAngles, temp_maxAngles);
@@ -302,9 +328,10 @@ void setup() {
     arm.effector.setPosition(origin);
     effector_origins.add(origin);
     arms.add(arm);
-  } 
+  }
   spider_position = new PVector(width / 2, height / 2, 0);
   spider_forwards = up.copy();
+  target.setPosition(-width/2, -height/2);
 }
 
 int frame = 0;
@@ -315,23 +342,58 @@ float spider_speed = 5f;
 PVector spider_position;
 PVector spider_forwards;
 PVector up = new PVector(0,1,0);
+Effector target = new Effector(10);
 
+void mouseClicked() {
+ target.setPosition(mouseX, mouseY);
+}
+
+float effector_gravity = 100;
+
+int captured_arms = 0;
 void draw() {
   background(20, 200, 220);
+  pushMatrix();
   translate(spider_position.x, spider_position.y);
   int sign = spider_forwards.x < 0 ? 1 : -1;
   rotate(sign * PVector.angleBetween(up, spider_forwards));
   ellipse(0, 4, 40, 80);
+  int max_captures = 3;
   for (int i = 0; i < arms.size(); i++) {
     Arm arm = arms.get(i);
-    PVector origin = effector_origins.get(i).copy();
-    origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
-    origin.add(step_length * cos(frame / period), 0);
-    arm.effector.setPosition(origin);
+    PVector end_position = arm.calculatePosition();
+    if (i == 0) print(end_position.x + " " + end_position.y + "\n");
+    float distance = target.distanceFrom(end_position);
+    if (i == 0) print(distance + "\n");
+    if (distance < effector_gravity && arm.effector != target) {
+      if (captured_arms < max_captures) {
+        arm.pushEffector(target);
+        captured_arms++;
+      }
+    } else if (distance > effector_gravity && arm.effector == target) {
+      arm.popEffector();
+      captured_arms--;
+    }
+    if (arm.effector != target) {
+      PVector origin = effector_origins.get(i).copy();
+      origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
+      origin.add(step_length * cos(frame / period), 0);
+      arm.effector.setPosition(screenPoint(origin));
+    }
     arm.updateAngles();
-    arm.effector.draw();
     arm.draw();
   }
+  popMatrix();
+  for (Arm arm : arms) {
+    arm.effector.draw(); 
+  }
+  pushMatrix();
+  target.draw();
+  pushStyle();
+  noFill();
+  circle(target.position.x, target.position.y, effector_gravity*2);
+  popStyle();
+  popMatrix();
   PVector direction = new PVector(mouseX - spider_position.x, mouseY - spider_position.y, 0f);
   float distance = direction.mag();
   direction.normalize();
