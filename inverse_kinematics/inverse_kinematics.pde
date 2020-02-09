@@ -282,58 +282,80 @@ float rad(float degrees) {
 }
 
 void setup() {
-  size(1280, 1024);
+  size(640,480);
   frameRate(24);
   
+  List<Float> placementAngles = Arrays.asList(
+    rad(70),   // right antenna
+    rad(110),  // left antenna
+    rad(30),   // right front
+    rad(150),  // left front
+    rad(10),   // right front-middle
+    rad(170),  // left front-middle
+    rad(-10),  // right rear-middle
+    rad(-170), // left rear-middle
+    rad(-30),  // right rear
+    rad(-150), // left rear
+    rad(-90)   // flagellum
+  );
+  final float LOW_DOF = rad(10),
+              MEDIUM_DOF = rad(30),
+              HIGH_DOF = rad(60),
+              INF_DOF = rad(1000 * PI);
   List<List<Integer>> lengths = Arrays.asList(
-    Arrays.asList(20, 10, 20, 10),  // left front leg
-    Arrays.asList(30, 30, 30, 30),  // left antenna
-    Arrays.asList(30, 30, 30, 30),  // right antenna
-    Arrays.asList(20, 10, 20, 10),  // right front leg
-    Arrays.asList(20, 10, 20, 10),  // right rear leg
-    Arrays.asList(10, 40, 30, 20),  // right tail
-    Arrays.asList(10, 40, 30, 20),  // left tail
-    Arrays.asList(10, 20, 20, 20)   // left rear leg
+    Arrays.asList(30, 30, 30, 30),
+    Arrays.asList(30, 30, 30, 30),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(20, 20, 20, 20),
+    Arrays.asList(20, 20, 20, 20),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)
   );
   List<List<Float>> angles = Arrays.asList(
-    Arrays.asList(rad(15), 0f, 0f, 0f),
-    Arrays.asList(rad(65), 0f, 0f, 0f),
-    Arrays.asList(rad(115), 0f, 0f, 0f),
-    Arrays.asList(rad(165), 0f, 0f, 0f),
-    Arrays.asList(-rad(165), 0f, 0f, 0f),
-    Arrays.asList(-rad(100), 0f, 0f, 0f),
-    Arrays.asList(-rad(80), 0f, 0f, 0f),
-    Arrays.asList(-rad(15), 0f, 0f, 0f)
+    Arrays.asList(rad(70), -rad(30), 0f, 0f),
+    Arrays.asList(rad(110), rad(30), 0f, 0f),
+    Arrays.asList(rad(10), rad(40), 0f, 0f),
+    Arrays.asList(rad(170), -rad(40), 0f, 0f),
+    Arrays.asList(-rad(10), rad(20), 0f, 0f),
+    Arrays.asList(-rad(170), -rad(20), 0f, 0f),
+    Arrays.asList(-rad(10), rad(20), 0f, 0f),
+    Arrays.asList(-rad(170), -rad(20), 0f, 0f),
+    Arrays.asList(-rad(10), -rad(40), 0f, 0f),
+    Arrays.asList(-rad(170), rad(40), 0f, 0f),
+    Arrays.asList(-rad(90), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45))
   );
-  List<List<Float>> minAngles = Arrays.asList(
-    Arrays.asList(rad(0), -PI, -PI, -PI),
-    Arrays.asList(rad(60), -PI, -PI, -PI),
-    Arrays.asList(rad(110), -PI, -PI, -PI),
-    Arrays.asList(rad(150), -PI, -PI, -PI),
-    Arrays.asList(-rad(180), -PI, -PI, -PI),
-    Arrays.asList(-rad(110), -PI, -PI, -PI),
-    Arrays.asList(-rad(120), -PI, -PI, -PI),
-    Arrays.asList(-rad(180), -PI, -PI, -PI)
-  );
-  List<List<Float>> maxAngles = Arrays.asList(
-    Arrays.asList(rad(20), PI, PI, PI),
-    Arrays.asList(rad(75), PI, PI, PI),
-    Arrays.asList(rad(125), PI, PI, PI),
-    Arrays.asList(rad(165), PI, PI, PI),
-    Arrays.asList(-rad(150), PI, PI, PI),
-    Arrays.asList(-rad(50), PI, PI, PI),
-    Arrays.asList(-rad(80), PI, PI, PI),
-    Arrays.asList(-rad(20), PI, PI, PI)
+  List<List<Float>> freedom = Arrays.asList(
+    Arrays.asList(LOW_DOF, HIGH_DOF, MEDIUM_DOF, LOW_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, LOW_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF)
+    
   );
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
-  int i = 0;
-  for (float angle = PI/8; angle < 2 * PI + PI/8 - 0.0001; angle += 2 * PI / num_arms) {
+  for (int i = 0; i < placementAngles.size(); i++) {
+    float angle = placementAngles.get(i);
     float circleX = radius * cos(angle),
           circleY = radius * sin(angle);
-    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths.get(i), angles.get(i), minAngles.get(i), maxAngles.get(i));
-    i++;
+    List<Float> minAngles = new ArrayList<Float>(angles.get(i)),
+                maxAngles = new ArrayList<Float>(angles.get(i));
+    for (int j = 0; j < minAngles.size(); j++) {
+      minAngles.set(j, minAngles.get(j) - freedom.get(i).get(j));
+      maxAngles.set(j, maxAngles.get(j) + freedom.get(i).get(j));
+    }
+    Arm arm = new Arm(new PVector(circleX / 2, circleY, 0), lengths.get(i), angles.get(i), minAngles, maxAngles);
     PVector origin = arm.calculatePosition();
     origin.mult(1.2);
     origin.sub(0, 20);
@@ -361,13 +383,23 @@ void mouseClicked() {
  target.setPosition(mouseX, mouseY);
 }
 
-float effector_gravity = 300;
+float effector_gravity = 100;
 
 int captured_arms = 0;
 int max_captures = 4;
 
+boolean drawEffectors = false;
+
 void draw() {
   background(20, 200, 220);
+  
+  pushMatrix();
+  pushStyle();
+  noStroke();
+  fill(20, 190, 220);
+  circle(target.position.x, target.position.y, effector_gravity*2);
+  popStyle();
+  popMatrix();
   pushMatrix();
   translate(spider_position.x, spider_position.y);
   int sign = spider_forwards.x < 0 ? 1 : -1;
@@ -389,23 +421,19 @@ void draw() {
     if (arm.effector != target) {
       PVector origin = effector_origins.get(i).copy();
       origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
-      origin.add(step_length * cos(frame / period), 0);
+      origin.add(step_length * cos((frame+3*i) / (period+i)), 0);
       arm.effector.setPosition(screenPoint(origin));
     }
     arm.updateAngles();
     arm.draw();
   }
   popMatrix();
-  for (Arm arm : arms) {
-    //arm.effector.draw(); 
+  if (drawEffectors) {
+    for (Arm arm : arms) {
+      arm.effector.draw(); 
+    }
   }
-  pushMatrix();
   target.draw();
-  pushStyle();
-  noFill();
-  circle(target.position.x, target.position.y, effector_gravity*2);
-  popStyle();
-  popMatrix();
   PVector direction = new PVector(mouseX - spider_position.x, mouseY - spider_position.y, 0f);
   float distance = direction.mag();
   direction.normalize();
