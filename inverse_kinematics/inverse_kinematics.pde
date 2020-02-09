@@ -51,6 +51,10 @@ class Arm {
     effector = new Effector(10);
     PVector end_position = calculatePosition();
     effector.setPosition((int)end_position.x, (int)end_position.y);
+    _screenCoords = new ArrayList<PVector[]>(angles.size());
+    for (int i = 0; i < angles.size(); i++) {
+      _screenCoords.add(new PVector[] {new PVector(), new PVector(), new PVector(), new PVector()}); 
+    }
   }
   
   void pushEffector(Effector e) {
@@ -73,6 +77,8 @@ class Arm {
     }
     return screenPoint(matrix.mult(new PVector(0, HEIGHT/2, 0), null));
   }
+  
+  List<PVector[]> _screenCoords;
 
   void updateAngles() {
     List<Float> originalAngles = new ArrayList<Float>(angles);
@@ -110,32 +116,21 @@ class Arm {
     if (originalDistance - newDistance < -resolution) {
        for (int i = 0; i < angles.size(); i++) {
          angles.set(i, originalAngles.get(i));
+         PVector[] here = new PVector[4];
+         float margin = 0.1;
+         int xMargin = (int)(lengths.get(i) * margin),
+             yMargin = (int)(HEIGHT * margin);
+         here[0] = screenPoint(xMargin, yMargin);
+         here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
+         here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
+         here[3] = screenPoint(xMargin, HEIGHT - yMargin);
+         _screenCoords.set(i, here);
        }
     }
   }
   
   List<PVector[]> screenCoords() {
-    pushMatrix();
-    resetMatrix();
-    List<PVector[]> coords = new ArrayList<PVector[]>(angles.size());
-    translate(position.x, position.y);
-    for (int i = 0; i < angles.size(); i++) {
-       translate(0, HEIGHT/2);
-       rotate(angles.get(i));
-       translate(0, -HEIGHT/2);
-       PVector[] here = new PVector[4];
-       float margin = 0.1;
-       int xMargin = (int)(lengths.get(i) * margin),
-           yMargin = (int)(HEIGHT * margin);
-       here[0] = screenPoint(xMargin, yMargin);
-       here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
-       here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
-       here[3] = screenPoint(xMargin, HEIGHT - yMargin);
-       coords.add(here);
-       translate(lengths.get(i), 0);
-    }
-    popMatrix();
-    return coords;
+    return new ArrayList<PVector[]>(_screenCoords);
   }
 
   boolean collisions(int i) {
