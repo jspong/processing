@@ -204,7 +204,7 @@ float lengthOf(List<Float> vector) {
     size += vector.get(i) * vector.get(i);
   }
   return sqrt(size);
-}
+} 
 
 boolean polyPoly(PVector[] p1, PVector[] p2) {
   int j = 0;
@@ -265,7 +265,6 @@ PVector screenPoint(PVector p) {
 
 int HEIGHT = 4;
 
-int num_arms = 8; 
 float step = 0.09;
 List<Arm> arms;
 List<PVector> effector_origins;
@@ -336,8 +335,8 @@ void setup() {
 
     );
   int radius = 40;
-  arms = new ArrayList<Arm>(num_arms);
-  effector_origins = new ArrayList<PVector>(num_arms);
+  arms = new ArrayList<Arm>(angles.size());
+  effector_origins = new ArrayList<PVector>(angles.size());
   for (int i = 0; i < placementAngles.size(); i++) {
     float angle = placementAngles.get(i);
     float circleX = radius * cos(angle), 
