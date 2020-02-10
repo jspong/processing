@@ -3,14 +3,14 @@ import java.util.List;
 import java.util.ArrayList;
 
 class Effector {
-  
+
   public PVector position;
   private int _size;
-  
+
   Effector(int size) {
     _size = size;
   }
-  
+
   void draw() {
     pushStyle();
     fill(200, 0, 0);
@@ -27,7 +27,7 @@ class Arm {
   List<Float> maxAngles;
   Effector effector;
   Effector lastEffector;
-  
+
   public Arm(PVector position, List<Integer> lengths, List<Float> angles, List<Float> minAngles, List<Float> maxAngles) {
     this.position = position;
     this.lengths = new ArrayList<Integer>(lengths);
@@ -36,22 +36,18 @@ class Arm {
     this.maxAngles = new ArrayList<Float>(maxAngles);
     effector = new Effector(10);
     effector.position = calculatePosition();
-    _screenCoords = new ArrayList<PVector[]>(angles.size());
-    for (int i = 0; i < angles.size(); i++) {
-      _screenCoords.add(new PVector[] {new PVector(), new PVector(), new PVector(), new PVector()}); 
-    }
   }
-  
+
   void holdTemporaryEffector(Effector e) {
     lastEffector = effector;
     effector = e;
   }
-  
+
   void releaseTemporaryEffector() {
     effector = lastEffector;
     lastEffector = null;
   }
-  
+
   PVector calculatePosition() {
     PMatrix2D matrix = new PMatrix2D();
     matrix.translate(position.x, position.y);
@@ -62,8 +58,6 @@ class Arm {
     }
     return screenPoint(matrix.mult(new PVector(0, HEIGHT/2, 0), null));
   }
-  
-  List<PVector[]> _screenCoords;
 
   void updateAngles() {
     List<Float> originalAngles = new ArrayList<Float>(angles);
@@ -85,7 +79,7 @@ class Arm {
       float x2 = effector.position.dist(calculatePosition());
       float gradient = x2 - x1;
       float recovery = 0.01;
-      
+
       float offset = gradient * 0.005 * recovery;
       if (gradient > 0 && leftCollide) {
         angles.set(i, original - offset);
@@ -95,40 +89,52 @@ class Arm {
         angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
       }
     }
-    float originalDistance = effector.position.dist(calculatePosition()),
-          newDistance = effector.position.dist(calculatePosition()),
-          resolution = 0.00001;
+    float originalDistance = effector.position.dist(calculatePosition()), 
+      newDistance = effector.position.dist(calculatePosition()), 
+      resolution = 0.00001;
     if (originalDistance - newDistance < -resolution) {
-       for (int i = 0; i < angles.size(); i++) {
-         angles.set(i, originalAngles.get(i));
-         PVector[] here = new PVector[4];
-         float margin = 0.1;
-         int xMargin = (int)(lengths.get(i) * margin),
-             yMargin = (int)(HEIGHT * margin);
-         here[0] = screenPoint(xMargin, yMargin);
-         here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
-         here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
-         here[3] = screenPoint(xMargin, HEIGHT - yMargin);
-         _screenCoords.set(i, here);
-       }
+      for (int i = 0; i < angles.size(); i++) {
+        angles.set(i, originalAngles.get(i));
+      }
     }
   }
-  
+
   List<PVector[]> screenCoords() {
-    return new ArrayList<PVector[]>(_screenCoords);
+    List<PVector[]> screen_coords = new ArrayList<PVector[]>(angles.size());
+    pushMatrix();
+    resetMatrix();
+    translate(position.x, position.y);
+    for (int i = 0; i < angles.size(); i++) {
+      translate(0, HEIGHT/2);
+      rotate(angles.get(i));
+      translate(0, -HEIGHT/2);
+      
+      PVector[] here = new PVector[4];
+      float margin = 0.1;
+      int xMargin = (int)(lengths.get(i) * margin), 
+          yMargin = (int)(HEIGHT * margin);
+      here[0] = screenPoint(xMargin, yMargin);
+      here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
+      here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
+      here[3] = screenPoint(xMargin, HEIGHT - yMargin);
+      screen_coords.add(here);
+      translate(lengths.get(i), 0);
+    }
+    popMatrix();
+    return screen_coords;
   }
 
   boolean collisions(int i) {
     List<PVector[]> coords = screenCoords();
     for (int j = 0; j < coords.size(); j++) {
       if (abs(i-j) < 2) continue;
-        if (polyPoly(coords.get(i), coords.get(j))) {
-          return true;
-        }
+      if (polyPoly(coords.get(i), coords.get(j))) {
+        return true;
+      }
     }
     return false;
   }
-  
+
   boolean collisions(Arm other) {
     if (other == this) {
       return false;
@@ -144,7 +150,7 @@ class Arm {
     }
     return false;
   }
-  
+
   void draw() {
     pushMatrix();
     List<PVector[]> screen_coordinates = screenCoords();
@@ -152,14 +158,14 @@ class Arm {
     fill(255);
     int[] collisions = new int[screen_coordinates.size()];
     for (int i = 0; i < collisions.length; i++) {
-      collisions[i] = 0; 
+      collisions[i] = 0;
     }
     for (int i = 0; i < collisions.length; i++) {
       for (int j = i + 1; j < collisions.length; j++) {
-         if (polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
-           collisions[i]++;
-           collisions[j]++;
-         }
+        if (polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
+          collisions[i]++;
+          collisions[j]++;
+        }
       }
     }
     translate(position.x, position.y);
@@ -168,15 +174,17 @@ class Arm {
       rotate(angles.get(i));
       translate(0, -HEIGHT/2);
       float t = (float)collisions[i] / collisions.length;
-      fill(color(lerp(255,200,t), lerp(255, 20,t), lerp(255, 140, t)));
+      fill(color(lerp(255, 200, t), lerp(255, 20, t), lerp(255, 140, t)));
       ellipse(lengths.get(i)/2, HEIGHT/2, lengths.get(i), HEIGHT);
       translate(lengths.get(i), 0);
     }
-    
+
     popStyle();
     popMatrix();
-    
-    boolean boundingBoxes = true;
+
+    pushMatrix();
+    resetMatrix();
+    boolean boundingBoxes = false;
     if (boundingBoxes) {
       for (PVector[] shape : screen_coordinates) {
         beginShape();
@@ -187,15 +195,15 @@ class Arm {
         endShape(CLOSE);
       }
     }
+    popMatrix();
   }
-
 }
 float lengthOf(List<Float> vector) {
-   float size = 0;
-   for (int i = 0; i < vector.size(); i++) {
-      size += vector.get(i) * vector.get(i); 
-   }
-   return sqrt(size);
+  float size = 0;
+  for (int i = 0; i < vector.size(); i++) {
+    size += vector.get(i) * vector.get(i);
+  }
+  return sqrt(size);
 }
 
 boolean polyPoly(PVector[] p1, PVector[] p2) {
@@ -204,7 +212,7 @@ boolean polyPoly(PVector[] p1, PVector[] p2) {
     j = (i + 1) % p1.length;
     PVector current = p1[i];
     PVector next = p1[j];
-    
+
     if (polyLine(p2, current.x, current.y, next.x, next.y)) return true;
   }
   return polyPoint(p1, p2[0].x, p2[0].y);
@@ -214,10 +222,10 @@ boolean polyLine(PVector[] vertices, float x1, float y1, float x2, float y2) {
   int j = 0;
   for (int i = 0; i < vertices.length; i++) {
     j = (i + 1) % vertices.length;
-    float x3 = vertices[i].x,
-          y3 = vertices[i].y,
-          x4 = vertices[j].x,
-          y4 = vertices[j].y;
+    float x3 = vertices[i].x, 
+      y3 = vertices[i].y, 
+      x4 = vertices[j].x, 
+      y4 = vertices[j].y;
     if (lineLine(x1, y1, x2, y2, x3, y3, x4, y4)) return true;
   }
   return false;
@@ -230,29 +238,29 @@ boolean lineLine(float x1, float y1, float x2, float y2, float x3, float y3, flo
 }
 
 boolean polyPoint(PVector[] vertices, float x, float y) {
-   boolean collision = false;
-   
-   int j = 0;
-   for (int i = 0; i < vertices.length; i++) {
-     j = (i + 1) % vertices.length;
-     
-     PVector current = vertices[i];
-     PVector next = vertices[j];
-     
-     if ( ((current.y > y && next.y < y) || (current.y < y && next.y > y)) && 
-          (x < (next.x-current.x) * (y - current.y) / (next.y - current.y) + current.x) ) {
-       collision = !collision;
-     }
-   }
-   return collision;
+  boolean collision = false;
+
+  int j = 0;
+  for (int i = 0; i < vertices.length; i++) {
+    j = (i + 1) % vertices.length;
+
+    PVector current = vertices[i];
+    PVector next = vertices[j];
+
+    if ( ((current.y > y && next.y < y) || (current.y < y && next.y > y)) && 
+      (x < (next.x-current.x) * (y - current.y) / (next.y - current.y) + current.x) ) {
+      collision = !collision;
+    }
+  }
+  return collision;
 }
 
 PVector screenPoint(int x, int y) {
-  return new PVector(screenX(x, y), screenY(x, y)); 
+  return new PVector(screenX(x, y), screenY(x, y));
 }
 
 PVector screenPoint(PVector p) {
-  return new PVector(screenX(p.x, p.y), screenY(p.x, p.y)); 
+  return new PVector(screenX(p.x, p.y), screenY(p.x, p.y));
 }
 
 int HEIGHT = 4;
@@ -263,79 +271,79 @@ List<Arm> arms;
 List<PVector> effector_origins;
 
 float rad(float degrees) {
-  return degrees * PI / 180; 
+  return degrees * PI / 180;
 }
 
 void setup() {
-  size(640,480);
+  size(640, 480);
   frameRate(24);
-  
+
   List<Float> placementAngles = Arrays.asList(
-    rad(70),   // right antenna
-    rad(110),  // left antenna
-    rad(30),   // right front
-    rad(150),  // left front
-    rad(10),   // right front-middle
-    rad(170),  // left front-middle
-    rad(-10),  // right rear-middle
+    rad(70), // right antenna
+    rad(110), // left antenna
+    rad(30), // right front
+    rad(150), // left front
+    rad(10), // right front-middle
+    rad(170), // left front-middle
+    rad(-10), // right rear-middle
     rad(-170), // left rear-middle
-    rad(-30),  // right rear
+    rad(-30), // right rear
     rad(-150), // left rear
     rad(-90)   // flagellum
-  );
-  final float LOW_DOF = rad(10),
-              MEDIUM_DOF = rad(30),
-              HIGH_DOF = rad(60),
-              INF_DOF = rad(1000 * PI);
+    );
+  final float LOW_DOF = rad(10), 
+    MEDIUM_DOF = rad(30), 
+    HIGH_DOF = rad(60), 
+    INF_DOF = rad(1000 * PI);
   List<List<Integer>> lengths = Arrays.asList(
-    Arrays.asList(30, 30, 30, 30),
-    Arrays.asList(30, 30, 30, 30),
-    Arrays.asList(20, 10, 20, 10),
-    Arrays.asList(20, 10, 20, 10),
-    Arrays.asList(20, 10, 20, 10),
-    Arrays.asList(20, 10, 20, 10),
-    Arrays.asList(20, 20, 20, 20),
-    Arrays.asList(20, 20, 20, 20),
-    Arrays.asList(20, 10, 20, 10),
-    Arrays.asList(20, 10, 20, 10),
+    Arrays.asList(30, 30, 30, 30), 
+    Arrays.asList(30, 30, 30, 30), 
+    Arrays.asList(20, 10, 20, 10), 
+    Arrays.asList(20, 10, 20, 10), 
+    Arrays.asList(20, 10, 20, 10), 
+    Arrays.asList(20, 10, 20, 10), 
+    Arrays.asList(20, 20, 20, 20), 
+    Arrays.asList(20, 20, 20, 20), 
+    Arrays.asList(20, 10, 20, 10), 
+    Arrays.asList(20, 10, 20, 10), 
     Arrays.asList(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)
-  );
+    );
   List<List<Float>> angles = Arrays.asList(
-    Arrays.asList(rad(70), -rad(30), 0f, 0f),
-    Arrays.asList(rad(110), rad(30), 0f, 0f),
-    Arrays.asList(rad(30), -rad(40), -rad(30), -rad(10)),
-    Arrays.asList(rad(150), rad(40), rad(30), rad(10)),
-    Arrays.asList(rad(20), -rad(20), -rad(20), -rad(20)),
-    Arrays.asList(-rad(160), rad(20), rad(20), rad(20)),
-    Arrays.asList(rad(20), -rad(30), -rad(20), -rad(10)),
-    Arrays.asList(-rad(160), rad(30), rad(20), rad(10)),
-    Arrays.asList(-rad(10), -rad(50), -rad(40), -rad(40)),
-    Arrays.asList(-rad(170), rad(50), rad(40), rad(40)),
+    Arrays.asList(rad(70), -rad(30), 0f, 0f), 
+    Arrays.asList(rad(110), rad(30), 0f, 0f), 
+    Arrays.asList(rad(40), -rad(40), -rad(30), -rad(10)), 
+    Arrays.asList(rad(140), rad(40), rad(30), rad(10)), 
+    Arrays.asList(rad(20), -rad(20), -rad(20), -rad(20)), 
+    Arrays.asList(-rad(160), rad(20), rad(20), rad(20)), 
+    Arrays.asList(rad(20), -rad(30), -rad(20), -rad(10)), 
+    Arrays.asList(-rad(160), rad(30), rad(20), rad(10)), 
+    Arrays.asList(-rad(10), -rad(50), -rad(40), -rad(40)), 
+    Arrays.asList(-rad(170), rad(50), rad(40), rad(40)), 
     Arrays.asList(-rad(90), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45))
-  );
+    );
   List<List<Float>> freedom = Arrays.asList(
-    Arrays.asList(LOW_DOF, HIGH_DOF, MEDIUM_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
-    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF),
+    Arrays.asList(LOW_DOF, HIGH_DOF, MEDIUM_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
+    Arrays.asList(LOW_DOF, MEDIUM_DOF, HIGH_DOF, HIGH_DOF), 
     Arrays.asList(LOW_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF, HIGH_DOF)
-    
-  );
+
+    );
   int radius = 40;
   arms = new ArrayList<Arm>(num_arms);
   effector_origins = new ArrayList<PVector>(num_arms);
   for (int i = 0; i < placementAngles.size(); i++) {
     float angle = placementAngles.get(i);
-    float circleX = radius * cos(angle),
-          circleY = radius * sin(angle);
-    List<Float> minAngles = new ArrayList<Float>(angles.get(i)),
-                maxAngles = new ArrayList<Float>(angles.get(i));
+    float circleX = radius * cos(angle), 
+      circleY = radius * sin(angle);
+    List<Float> minAngles = new ArrayList<Float>(angles.get(i)), 
+      maxAngles = new ArrayList<Float>(angles.get(i));
     for (int j = 0; j < minAngles.size(); j++) {
       minAngles.set(j, minAngles.get(j) - freedom.get(i).get(j));
       maxAngles.set(j, maxAngles.get(j) + freedom.get(i).get(j));
@@ -361,11 +369,11 @@ float spider_speed = 5f;
 
 PVector spider_position;
 PVector spider_forwards;
-PVector up = new PVector(0,1,0);
+PVector up = new PVector(0, 1, 0);
 Effector target = new Effector(10);
 
 void mouseClicked() {
- target.position = new PVector(mouseX, mouseY);
+  target.position = new PVector(mouseX, mouseY);
 }
 
 float effector_gravity = 100;
@@ -377,7 +385,7 @@ boolean drawEffectors = false;
 
 void draw() {
   background(20, 200, 220);
-  
+
   pushMatrix();
   pushStyle();
   noStroke();
@@ -415,7 +423,7 @@ void draw() {
   popMatrix();
   if (drawEffectors) {
     for (Arm arm : arms) {
-      arm.effector.draw(); 
+      arm.effector.draw();
     }
   }
   target.draw();
