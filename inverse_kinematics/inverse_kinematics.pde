@@ -4,25 +4,11 @@ import java.util.ArrayList;
 
 class Effector {
   
-  PVector position;
+  public PVector position;
   private int _size;
   
   Effector(int size) {
     _size = size;
-  }
-  
-  void setPosition(PVector position) {
-    this.position = position.copy();
-  } 
-  
-  void setPosition(int x, int y) {
-    setPosition(new PVector(x, y));
-  }
-  
-  float distanceFrom(PVector point) {
-    point = point.copy();
-    point.sub(position);
-    return point.mag();
   }
   
   void draw() {
@@ -49,20 +35,19 @@ class Arm {
     this.minAngles = new ArrayList<Float>(minAngles);
     this.maxAngles = new ArrayList<Float>(maxAngles);
     effector = new Effector(10);
-    PVector end_position = calculatePosition();
-    effector.setPosition((int)end_position.x, (int)end_position.y);
+    effector.position = calculatePosition();
     _screenCoords = new ArrayList<PVector[]>(angles.size());
     for (int i = 0; i < angles.size(); i++) {
       _screenCoords.add(new PVector[] {new PVector(), new PVector(), new PVector(), new PVector()}); 
     }
   }
   
-  void pushEffector(Effector e) {
+  void holdTemporaryEffector(Effector e) {
     lastEffector = effector;
     effector = e;
   }
   
-  void popEffector() {
+  void releaseTemporaryEffector() {
     effector = lastEffector;
     lastEffector = null;
   }
@@ -90,14 +75,14 @@ class Arm {
         if (leftCollide) break;
         leftCollide = collisions(arm);
       }
-      float x1 = effector.distanceFrom(calculatePosition());
+      float x1 = effector.position.dist(calculatePosition());
       angles.set(i, original + step / 2);
       boolean rightCollide = collisions(i);
       for (Arm arm : arms) {
         if (rightCollide) break;
         rightCollide = collisions(arm);
       }
-      float x2 = effector.distanceFrom(calculatePosition());
+      float x2 = effector.position.dist(calculatePosition());
       float gradient = x2 - x1;
       float recovery = 0.01;
       
@@ -110,8 +95,8 @@ class Arm {
         angles.set(i, constrain(original - gradient * 0.005, minAngles.get(i), maxAngles.get(i)));
       }
     }
-    float originalDistance = effector.distanceFrom(calculatePosition()),
-          newDistance = effector.distanceFrom(calculatePosition()),
+    float originalDistance = effector.position.dist(calculatePosition()),
+          newDistance = effector.position.dist(calculatePosition()),
           resolution = 0.00001;
     if (originalDistance - newDistance < -resolution) {
        for (int i = 0; i < angles.size(); i++) {
@@ -360,13 +345,13 @@ void setup() {
     origin.mult(1.2);
     origin.sub(0, 20);
     origin.add(10 * cos(angle), 10 * sin(angle));
-    arm.effector.setPosition(origin);
+    arm.effector.position = origin;
     effector_origins.add(origin);
     arms.add(arm);
   }
   spider_position = new PVector(width / 2, height / 2, 0);
   spider_forwards = up.copy();
-  target.setPosition(-width/2, -height/2);
+  target.position = new PVector(-width/2, -height/2);
 }
 
 int frame = 0;
@@ -380,7 +365,7 @@ PVector up = new PVector(0,1,0);
 Effector target = new Effector(10);
 
 void mouseClicked() {
- target.setPosition(mouseX, mouseY);
+ target.position = new PVector(mouseX, mouseY);
 }
 
 float effector_gravity = 100;
@@ -408,21 +393,21 @@ void draw() {
   for (int i = 0; i < arms.size(); i++) {
     Arm arm = arms.get(i);
     PVector end_position = arm.calculatePosition();
-    float distance = target.distanceFrom(end_position);
+    float distance = target.position.dist(end_position);
     if (distance < effector_gravity && arm.effector != target) {
       if (captured_arms < max_captures) {
-        arm.pushEffector(target);
+        arm.holdTemporaryEffector(target);
         captured_arms++;
       }
     } else if (distance > effector_gravity && arm.effector == target) {
-      arm.popEffector();
+      arm.releaseTemporaryEffector();
       captured_arms--;
     }
     if (arm.effector != target) {
       PVector origin = effector_origins.get(i).copy();
       origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
       origin.add(step_length * cos((frame+3*i) / (period+i)), 0);
-      arm.effector.setPosition(screenPoint(origin));
+      arm.effector.position = screenPoint(origin);
     }
     arm.updateAngles();
     arm.draw();
