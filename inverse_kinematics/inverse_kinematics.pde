@@ -108,11 +108,11 @@ class Arm {
       translate(0, HEIGHT/2);
       rotate(angles.get(i));
       translate(0, -HEIGHT/2);
-      
+
       PVector[] here = new PVector[4];
       float margin = 0.1;
       int xMargin = (int)(lengths.get(i) * margin), 
-          yMargin = (int)(HEIGHT * margin);
+        yMargin = (int)(HEIGHT * margin);
       here[0] = screenPoint(xMargin, yMargin);
       here[1] = screenPoint(lengths.get(i) - xMargin, yMargin);
       here[2] = screenPoint(lengths.get(i) - xMargin, HEIGHT - yMargin);
@@ -128,7 +128,7 @@ class Arm {
     List<PVector[]> coords = screenCoords();
     for (int j = 0; j < coords.size(); j++) {
       if (abs(i-j) < 2) continue;
-      if (polyPoly(coords.get(i), coords.get(j))) {
+      if (Collision.polyPoly(coords.get(i), coords.get(j))) {
         return true;
       }
     }
@@ -143,7 +143,7 @@ class Arm {
     List<PVector[]> theirCoords = other.screenCoords();
     for (PVector[] a : myCoords) {
       for (PVector[] b : theirCoords) {
-        if (polyPoly(a, b)) {
+        if (Collision.polyPoly(a, b)) {
           return true;
         }
       }
@@ -162,7 +162,7 @@ class Arm {
     }
     for (int i = 0; i < collisions.length; i++) {
       for (int j = i + 1; j < collisions.length; j++) {
-        if (polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
+        if (Collision.polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
           collisions[i]++;
           collisions[j]++;
         }
@@ -198,102 +198,29 @@ class Arm {
     popMatrix();
   }
 }
-float lengthOf(List<Float> vector) {
-  float size = 0;
-  for (int i = 0; i < vector.size(); i++) {
-    size += vector.get(i) * vector.get(i);
-  }
-  return sqrt(size);
-} 
 
-boolean polyPoly(PVector[] p1, PVector[] p2) {
-  int j = 0;
-  for (int i = 0; i < p1.length; i++) {
-    j = (i + 1) % p1.length;
-    PVector current = p1[i];
-    PVector next = p1[j];
-
-    if (polyLine(p2, current.x, current.y, next.x, next.y)) return true;
-  }
-  return polyPoint(p1, p2[0].x, p2[0].y);
-}
-
-boolean polyLine(PVector[] vertices, float x1, float y1, float x2, float y2) {
-  int j = 0;
-  for (int i = 0; i < vertices.length; i++) {
-    j = (i + 1) % vertices.length;
-    float x3 = vertices[i].x, 
-      y3 = vertices[i].y, 
-      x4 = vertices[j].x, 
-      y4 = vertices[j].y;
-    if (lineLine(x1, y1, x2, y2, x3, y3, x4, y4)) return true;
-  }
-  return false;
-}
-
-boolean lineLine(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4) {
-  float uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
-  float uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
-  return uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1;
-}
-
-boolean polyPoint(PVector[] vertices, float x, float y) {
-  boolean collision = false;
-
-  int j = 0;
-  for (int i = 0; i < vertices.length; i++) {
-    j = (i + 1) % vertices.length;
-
-    PVector current = vertices[i];
-    PVector next = vertices[j];
-
-    if ( ((current.y > y && next.y < y) || (current.y < y && next.y > y)) && 
-      (x < (next.x-current.x) * (y - current.y) / (next.y - current.y) + current.x) ) {
-      collision = !collision;
-    }
-  }
-  return collision;
-}
-
-PVector screenPoint(int x, int y) {
-  return new PVector(screenX(x, y), screenY(x, y));
-}
-
-PVector screenPoint(PVector p) {
-  return new PVector(screenX(p.x, p.y), screenY(p.x, p.y));
-}
-
-int HEIGHT = 4;
-
-float step = 0.09;
-List<Arm> arms;
-List<PVector> effector_origins;
-
-float rad(float degrees) {
-  return degrees * PI / 180;
-}
 
 void setup() {
   size(640, 480);
   frameRate(24);
 
   List<Float> placementAngles = Arrays.asList(
-    rad(70), // right antenna
-    rad(110), // left antenna
-    rad(30), // right front
-    rad(150), // left front
-    rad(10), // right front-middle
-    rad(170), // left front-middle
-    rad(-10), // right rear-middle
-    rad(-170), // left rear-middle
-    rad(-30), // right rear
-    rad(-150), // left rear
-    rad(-90)   // flagellum
+    radians(70), // right antenna
+    radians(110), // left antenna
+    radians(30), // right front
+    radians(150), // left front
+    radians(10), // right front-middle
+    radians(170), // left front-middle
+    radians(-10), // right rear-middle
+    radians(-170), // left rear-middle
+    radians(-30), // right rear
+    radians(-150), // left rear
+    radians(-90)   // flagellum
     );
-  final float LOW_DOF = rad(10), 
-    MEDIUM_DOF = rad(30), 
-    HIGH_DOF = rad(60), 
-    INF_DOF = rad(1000 * PI);
+  final float LOW_DOF = radians(10), 
+    MEDIUM_DOF = radians(30), 
+    HIGH_DOF = radians(60), 
+    INF_DOF = radians(1000 * PI);
   List<List<Integer>> lengths = Arrays.asList(
     Arrays.asList(30, 30, 30, 30), 
     Arrays.asList(30, 30, 30, 30), 
@@ -308,17 +235,17 @@ void setup() {
     Arrays.asList(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)
     );
   List<List<Float>> angles = Arrays.asList(
-    Arrays.asList(rad(70), -rad(30), 0f, 0f), 
-    Arrays.asList(rad(110), rad(30), 0f, 0f), 
-    Arrays.asList(rad(40), -rad(40), -rad(30), -rad(10)), 
-    Arrays.asList(rad(140), rad(40), rad(30), rad(10)), 
-    Arrays.asList(rad(20), -rad(20), -rad(20), -rad(20)), 
-    Arrays.asList(-rad(160), rad(20), rad(20), rad(20)), 
-    Arrays.asList(rad(20), -rad(30), -rad(20), -rad(10)), 
-    Arrays.asList(-rad(160), rad(30), rad(20), rad(10)), 
-    Arrays.asList(-rad(10), -rad(50), -rad(40), -rad(40)), 
-    Arrays.asList(-rad(170), rad(50), rad(40), rad(40)), 
-    Arrays.asList(-rad(90), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45), rad(45), -rad(45))
+    Arrays.asList(radians(70), -radians(30), 0f, 0f), 
+    Arrays.asList(radians(110), radians(30), 0f, 0f), 
+    Arrays.asList(radians(40), -radians(40), -radians(30), -radians(10)), 
+    Arrays.asList(radians(140), radians(40), radians(30), radians(10)), 
+    Arrays.asList(radians(20), -radians(20), -radians(20), -radians(20)), 
+    Arrays.asList(-radians(160), radians(20), radians(20), radians(20)), 
+    Arrays.asList(radians(20), -radians(30), -radians(20), -radians(10)), 
+    Arrays.asList(-radians(160), radians(30), radians(20), radians(10)), 
+    Arrays.asList(-radians(10), -radians(50), -radians(40), -radians(40)), 
+    Arrays.asList(-radians(170), radians(50), radians(40), radians(40)), 
+    Arrays.asList(-radians(90), radians(45), -radians(45), radians(45), -radians(45), radians(45), -radians(45), radians(45), -radians(45), radians(45), -radians(45), radians(45), -radians(45), radians(45), -radians(45))
     );
   List<List<Float>> freedom = Arrays.asList(
     Arrays.asList(LOW_DOF, HIGH_DOF, MEDIUM_DOF, HIGH_DOF), 
@@ -359,79 +286,4 @@ void setup() {
   spider_position = new PVector(width / 2, height / 2, 0);
   spider_forwards = up.copy();
   target.position = new PVector(-width/2, -height/2);
-}
-
-int frame = 0;
-float period = 50f;
-float step_length = 20;
-float spider_speed = 5f;
-
-PVector spider_position;
-PVector spider_forwards;
-PVector up = new PVector(0, 1, 0);
-Effector target = new Effector(10);
-
-void mouseClicked() {
-  target.position = new PVector(mouseX, mouseY);
-}
-
-float effector_gravity = 100;
-
-int captured_arms = 0;
-int max_captures = 4;
-
-boolean drawEffectors = false;
-
-void draw() {
-  background(20, 200, 220);
-
-  pushMatrix();
-  pushStyle();
-  noStroke();
-  fill(20, 190, 220);
-  circle(target.position.x, target.position.y, effector_gravity*2);
-  popStyle();
-  popMatrix();
-  pushMatrix();
-  translate(spider_position.x, spider_position.y);
-  int sign = spider_forwards.x < 0 ? 1 : -1;
-  rotate(sign * PVector.angleBetween(up, spider_forwards));
-  ellipse(0, 4, 40, 80);
-  for (int i = 0; i < arms.size(); i++) {
-    Arm arm = arms.get(i);
-    PVector end_position = arm.calculatePosition();
-    float distance = target.position.dist(end_position);
-    if (distance < effector_gravity && arm.effector != target) {
-      if (captured_arms < max_captures) {
-        arm.holdTemporaryEffector(target);
-        captured_arms++;
-      }
-    } else if (distance > effector_gravity && arm.effector == target) {
-      arm.releaseTemporaryEffector();
-      captured_arms--;
-    }
-    if (arm.effector != target) {
-      PVector origin = effector_origins.get(i).copy();
-      origin.add(0, step_length * (i % 2 == 1 ? -1 : 1) * sin(frame++ / period));
-      origin.add(step_length * cos((frame+3*i) / (period+i)), 0);
-      arm.effector.position = screenPoint(origin);
-    }
-    arm.updateAngles();
-    arm.draw();
-  }
-  popMatrix();
-  if (drawEffectors) {
-    for (Arm arm : arms) {
-      arm.effector.draw();
-    }
-  }
-  target.draw();
-  PVector direction = new PVector(mouseX - spider_position.x, mouseY - spider_position.y, 0f);
-  float distance = direction.mag();
-  direction.normalize();
-  if (distance >= 40) {
-    spider_forwards = direction.copy();
-    direction.mult(min(distance, spider_speed));
-    spider_position.add(direction);
-  }
 }
