@@ -2,9 +2,11 @@
 void setup() {
   size(640, 480);
   frameRate(24);
-  setupWaterSpider();
+  setupPhysics();
+  testCollisions();
+  noLoop();
 }
 
 void draw() {
-  drawWaterSpider();
+  drawPhysics();
 }

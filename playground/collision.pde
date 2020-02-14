@@ -27,34 +27,32 @@ static class Collision {
     if (circlePoint(center, radius, p1)) return true;
     if (circlePoint(center, radius, p2)) return true;
     
-    PVector dist = p2.copy();
-    dist.sub(p1);
-    float len = dist.mag();
-    float dot = p1.dot(p2);
-    PVector closest = dist.copy();
-    closest.mult(dot);
-    closest.add(p1);
-    if (!linePoint(p1, p2, closest)) return false;
-    closest.sub(center);
-    return closest.mag() <= radius;
+    PVector dist = PVector.sub(p2, p1);
+    PVector dist2 = PVector.sub(center, p1);
+    float dot = dist.dot(dist2) / pow(dist.mag(), 2);
+    PVector closest = PVector.add(p1, PVector.mult(dist, dot));
+    closest = new PVector(p1.x + dot * (p2.x - p1.x), p1.y + dot * (p2.y - p1.y));
+    if (!linePoint(p1, p2, closest)) {
+      return false;
+    }
+    return circlePoint(center, radius, closest);
   }
   
   static boolean circlePoint(PVector center, float radius, PVector point) {
-    PVector distance = point.copy();
-    distance.sub(center);
-    return distance.mag() <= radius; 
+    return PVector.sub(center, point).mag() <= radius;
+  }
+  
+  static boolean circleCircle(PVector c1, float r1, PVector c2, float r2) {
+    return PVector.sub(c1, c2).mag() <= r1 + r2; 
   }
   
   static boolean linePoint(PVector p1, PVector p2, PVector point) {
-     PVector line = p2.copy();
-     p2.sub(p1);
-     PVector edge1 = p2.copy();
-     edge1.sub(point);
-     PVector edge2 = p1.copy();
-     edge2.sub(point);
-     float precision = 0.01;
+     float lineLength = PVector.sub(p2, p1).mag();
+     float dist1 = PVector.sub(p1, point).mag();
+     float dist2 = PVector.sub(p2, point).mag();
+     float precision = 0.001;
      
-     return line.mag() - edge1.mag() - edge2.mag() <= precision;
+     return abs(lineLength - dist1 - dist2) <= precision;
   }
   
   static boolean polyLine(PVector[] vertices, PVector p1, PVector p2) {
@@ -67,16 +65,8 @@ static class Collision {
   }
   
   static boolean lineLine(PVector a1, PVector a2, PVector b1, PVector b2) {
-    float x1 = a1.x,
-          y1 = a1.y,
-          x2 = a2.x,
-          y2 = a2.y,
-          x3 = b1.x,
-          y3 = b1.y,
-          x4 = b2.x,
-          y4 = b2.y;
-    float uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
-    float uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1));
+    float uA = ((b2.x-b1.x)*(a1.y-b1.y) - (b2.y-b1.y)*(a1.x-b1.x)) / ((b2.y-b1.y)*(a2.x-a1.x) - (b2.x-b1.x)*(a2.y-a1.y));
+    float uB = ((a2.x-a1.x)*(a1.y-b1.y) - (a2.y-a1.y)*(a1.x-b1.x)) / ((b2.y-b1.y)*(a2.x-a1.x) - (b2.x-b1.x)*(a2.y-a1.y));
     return uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1;
   }
   
@@ -97,4 +87,63 @@ static class Collision {
     }
     return collision;
   }
+}
+
+public static class CollisionTests extends TestCase {
+  public CollisionTests() {
+    super();
+  }
+  void testLineLine() {
+    assertTrue(Collision.lineLine(new PVector(1,0), new PVector(-1,0), new PVector(0, 1), new PVector(0, -1)));
+    assertFalse(Collision.lineLine(new PVector(0,0), new PVector(1,1), new PVector(1, 0), new PVector(0.9, 0.8)));
+    assertTrue(Collision.lineLine(new PVector(-1,-1), new PVector(1,1), new PVector(-1, 1), new PVector(1, -1)));
+  }
+  
+  void testCirceLine() {
+     assertTrue(Collision.circleLine(new PVector(), 1, new PVector(), new PVector(0, 0.5))); // Line fully inside circle
+     assertTrue(Collision.circleLine(new PVector(), 1, new PVector(-1, 1), new PVector(1, 1))); // Tangential to top
+     assertTrue(Collision.circleLine(new PVector(), 1, new PVector(0.3, 0.4), new PVector(4,4))); // First end in circle
+     assertTrue(Collision.circleLine(new PVector(), 1, new PVector(4,4), new PVector(.3, .4))); // Second end in circle
+     assertTrue(Collision.circleLine(new PVector(), 1, new PVector(-2, 0), new PVector(2, 0))); // Line cuts through circle
+     assertFalse(Collision.circleLine(new PVector(), 1, new PVector(3, 0), new PVector(4, 1))); // Line outside circle
+     assertFalse(Collision.circleLine(new PVector(), 1, new PVector(2, 0), new PVector(2, 1.1)));
+     
+     assertFalse(Collision.circleLine(new PVector(-2.1, 0), 1, new PVector(-1, 1), new PVector(1, 1)), "top");
+     assertFalse(Collision.circleLine(new PVector(-2.1, 0), 1, new PVector(1, 1), new PVector(1, -1)), "right");
+     assertFalse(Collision.circleLine(new PVector(-2.1, 0), 1, new PVector(1, -1), new PVector(-1, -1)), "bottom");
+     assertFalse(Collision.circleLine(new PVector(-2.1, 0), 1, new PVector(-1, -1), new PVector(-1, 1)), "left");
+  }
+  
+  void testPolyLine() {
+    PVector[] triangle = new PVector[] { new PVector(-1, -1), new PVector(0, 1), new PVector(1, -1) };
+    assertTrue(Collision.polyLine(triangle, triangle[0], triangle[1]));
+    assertTrue(Collision.polyLine(triangle, triangle[1], triangle[2]));
+    assertTrue(Collision.polyLine(triangle, triangle[2], triangle[0]));
+    assertTrue(Collision.polyLine(triangle, new PVector(-1, 0), new PVector(1, 0)));
+    assertFalse(Collision.polyLine(triangle, new PVector(5, 0), new PVector(6, 0)));
+  }
+  
+  void testPolyCircle() {
+    PVector[] square = new PVector[] { new PVector(-1, 1), new PVector(1, 1), new PVector(1, -1), new PVector(-1, -1) };
+    PVector center = new PVector();
+    float radius = 1f;
+    
+    assertTrue(Collision.polyCircle(square, center, radius));
+    assertTrue(Collision.polyCircle(square, new PVector(-1.9, 0), radius));
+    assertFalse(Collision.polyCircle(square, new PVector(-2.1, 0), radius));
+  }
+  
+  void testPolyPoint() {
+    PVector[] square = new PVector[] { new PVector(-1, 1), new PVector(1, 1), new PVector(1, -1), new PVector(-1, -1) };
+    assertTrue(Collision.polyPoint(square, new PVector()));
+    assertTrue(Collision.polyPoint(square, new PVector(-0.9, -0.9)));
+    assertTrue(Collision.polyPoint(square, new PVector(0.9, 0.9)));
+    assertTrue(Collision.polyPoint(square, new PVector(0.9, -0.9)));
+    assertTrue(Collision.polyPoint(square, new PVector(-0.9, 0.9)));
+    assertFalse(Collision.polyPoint(square, new PVector(5,0)));
+  }
+}
+
+void testCollisions() {
+  runTests(CollisionTests.class); 
 }
