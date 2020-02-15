@@ -1,3 +1,4 @@
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -10,7 +11,8 @@ void runTests(Class cls) {
   int testCount = 0;
   try {
       Method[] methods = cls.getMethods();
-      TestCase instance = (TestCase)cls.newInstance();
+      Constructor ctor = cls.getDeclaredConstructor(playground.class);
+      TestCase instance = (TestCase)ctor.newInstance(this);
 
       for (Method method : methods) {
         if (method.getName().startsWith("test")) {
@@ -54,8 +56,7 @@ void runTests(Class cls) {
     }
 }
 
-public static class TestCase {
-  public TestCase() {}
+public class TestCase {
   
   void setUp() {
   }

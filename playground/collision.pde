@@ -89,10 +89,8 @@ static class Collision {
   }
 }
 
-public static class CollisionTests extends TestCase {
-  public CollisionTests() {
-    super();
-  }
+public class CollisionTests extends TestCase {
+
   void testLineLine() {
     assertTrue(Collision.lineLine(new PVector(1,0), new PVector(-1,0), new PVector(0, 1), new PVector(0, -1)));
     assertFalse(Collision.lineLine(new PVector(0,0), new PVector(1,1), new PVector(1, 0), new PVector(0.9, 0.8)));
