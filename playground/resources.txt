@@ -1,2 +1,6 @@
 http://www.cs.cmu.edu/~15464-s13/lectures/lecture6/IK.pdf
 http://www.jeffreythompson.org/collision-detection/index.php
+
+https://gamedevelopment.tutsplus.com/tutorials/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331
+https://www.toptal.com/game/video-game-physics-part-i-an-introduction-to-rigid-body-dynamics
+

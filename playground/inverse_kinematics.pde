@@ -128,7 +128,7 @@ class Arm {
     List<PVector[]> coords = screenCoords();
     for (int j = 0; j < coords.size(); j++) {
       if (abs(i-j) < 2) continue;
-      if (Collision.polyPoly(coords.get(i), coords.get(j))) {
+      if (Collision.polyPoly(coords.get(i), coords.get(j)) != null) {
         return true;
       }
     }
@@ -143,7 +143,7 @@ class Arm {
     List<PVector[]> theirCoords = other.screenCoords();
     for (PVector[] a : myCoords) {
       for (PVector[] b : theirCoords) {
-        if (Collision.polyPoly(a, b)) {
+        if (Collision.polyPoly(a, b) != null) {
           return true;
         }
       }
@@ -162,7 +162,7 @@ class Arm {
     }
     for (int i = 0; i < collisions.length; i++) {
       for (int j = i + 1; j < collisions.length; j++) {
-        if (Collision.polyPoly(screen_coordinates.get(i), screen_coordinates.get(j))) {
+        if (Collision.polyPoly(screen_coordinates.get(i), screen_coordinates.get(j)) != null) {
           collisions[i]++;
           collisions[j]++;
         }
