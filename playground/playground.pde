@@ -1,10 +1,10 @@
 
 void setup() {
   size(640, 480);
-  frameRate(24);
-  setupPhysics();
+  frameRate(1);
+  setupPathFinder();
 }
 
 void draw() {
-  drawPhysics();
+  drawPathFinder();
 }
