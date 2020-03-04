@@ -82,6 +82,18 @@ public class TestCase {
       assertTrue(a.equals(b), message);
     }
   }
+  
+  void assertNotEqual(Object a, Object b) {
+    assertNotEqual(a, b, a + " == " + b);
+  }
+  
+  void assertNotEqual(Object a, Object b, String message) {
+    if (a == null) {
+      assertNotNull(b, message); 
+    } else {
+      assertFalse(a.equals(b), message); 
+    }
+  }
 
   void assertTrue(boolean value) {
     assertTrue(value, "Expecting true; got false");
