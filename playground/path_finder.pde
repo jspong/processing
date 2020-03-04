@@ -109,6 +109,7 @@ class Board {
   
   int circleSize;
   color[][] spaces;
+  Graph g;
   
   public Board(int circleSize) {
     this.circleSize = circleSize;
@@ -119,16 +120,44 @@ class Board {
     for (int i = 0; i < h; i++) {
       spaces[i] = new color[w];
     }
+    g = new Graph(); 
+    for (int x = 0; x < w; x++) {
+      for (int y = 0; y < h; y++) {
+        if (x > 0) {
+          g.addEdge(positionOf(x, y), positionOf(x-1, y));
+        }
+        if (x < w-1) {
+          g.addEdge(positionOf(x, y), positionOf(x+1, y)); 
+        }
+        if (y > 0) {
+          g.addEdge(positionOf(x, y), positionOf(x, y-1));
+        }
+        if (y < h-1) {
+          g.addEdge(positionOf(x, y), positionOf(x, y+1));
+        }
+        if (y % 2 == 1) {
+          if (y > 0 && x > 0) {
+            g.addEdge(positionOf(x, y), positionOf(x-1, y-1));
+          }
+          if (y < h-1 && x > 0) {
+            g.addEdge(positionOf(x, y), positionOf(x-1, y+1)); 
+          }
+        }
+      }
+    }
+  }
+  
+  PVector positionOf(int x, int y) {
+    return new PVector(x * circleSize + (y % 2 == 1 ? 0 : circleSize / 2), y * circleSize); 
   }
   
   public void draw() {
-    for (int y = 0; y < spaces.length; y++) {
-      for (int x = 0; x < spaces[y].length; x++) {
-        spaces[y][x] = color(200, 200, 200);
-        PVector center = new PVector(x * circleSize + (y % 2 == 1 ? 0 : circleSize / 2), y * circleSize);
-        fill(spaces[y][x]);
-        circle(center.x, center.y, circleSize);
-      }
+    for (Node n : board.g.nodes) {
+      fill(200);
+      circle(n.position.x, n.position.y, circleSize);
+    }
+    for (Edge e : board.g.edges) {
+      line(e.a.position.x, e.a.position.y, e.b.position.x, e.b.position.y); 
     }
   }
 }
