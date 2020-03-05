@@ -124,20 +124,32 @@ class Graph {
     return edge;
   }
   
+  float getCost(Node a, Node b) {
+    Edge edge = new Edge(a, b);
+    for (Edge e : edges) {
+      if (e.equals(edge)) {
+        return e.cost;
+      }
+    }
+    throw new RuntimeException("No edge from " + a + " to " + b);
+  }
+  
   List<Edge> shortestPath(PVector a, PVector b) {
+    Node target = new Node(b);
+    Node start = new Node(a);
     Set<Node> visited = new HashSet<Node>();
     Map<Node, Float> distances = new HashMap<Node, Float>();
     for (Node n : nodes) {
       distances.put(n, 0f); 
     }
+    
     Set<Node> toVisit = new HashSet<Node>();
-    Node target = new Node(b);
-    Node start = new Node(a);
     toVisit.add(start);
+    
     while (!visited.contains(target)) {
       Node current = null;
       float distance = Integer.MAX_VALUE;
-      for (Node n : (toVisit.size() == 0 ? nodes : toVisit)) {
+      for (Node n : toVisit) {
         if (visited.contains(n)) continue;
         if (distances.get(n) < distance) {
           distance = distances.get(n);
@@ -147,29 +159,26 @@ class Graph {
       
       toVisit.remove(current);
       
-      Set<Node> neighbors = getNeighbors(current);
-      for (Node neighbor : neighbors) {
+      for (Node neighbor : getNeighbors(current)) {
         if (visited.contains(neighbor)) continue;
-        float distanceToNeighbor = 1;
-        for (Edge e : edges) {
-          if (e.equals(new Edge(current, neighbor))) {
-             distanceToNeighbor = e.cost;
-             break;
-          }
-        }
-        if (distances.get(neighbor) == 0 || distances.get(neighbor) > distances.get(current) + distanceToNeighbor) {
-          distances.put(neighbor, distances.get(current) + distanceToNeighbor);
+        
+        float cost = getCost(current, neighbor);
+        if (distances.get(neighbor) == 0 || distances.get(neighbor) > distances.get(current) + cost) {
+          distances.put(neighbor, distances.get(current) + cost);
         }
         toVisit.add(neighbor);
       }
+      
       visited.add(current);
     }
     
+    pushStyle();
+    fill(0);
+    textSize(18);
     for (Node node : visited) {
-      fill(0);
-      textSize(18);
       text(String.format("%.2f", distances.get(node)), node.position.x, node.position.y);
     }
+    popStyle();
     
     Node current = target;
     
@@ -194,18 +203,13 @@ class Graph {
 class Board {
   
   int circleSize;
-  color[][] spaces;
   Graph g;
   
   public Board(int circleSize) {
     this.circleSize = circleSize;
-    
     int w = width / circleSize + 2;
     int h = width / circleSize + 2;
-    spaces = new color[h][];
-    for (int i = 0; i < h; i++) {
-      spaces[i] = new color[w];
-    }
+    
     g = new Graph();
     for (int x = 0; x < w; x++) {
       for (int y = 0; y < h; y++) {
@@ -248,19 +252,18 @@ class Board {
 Board board;
 
 public void setupPathFinder() {
-  
 }
 
 public void drawPathFinder() {
-  board = new Board(50);
   background(255);
+  
+  board = new Board(50);
   board.draw();
-  List<Edge> path = board.g.shortestPath(board.positionOf(3, 3), board.positionOf(10, 5));
  
   pushStyle();
   strokeWeight(4);
   stroke(255,0,0);
-  for (Edge e : path) {
+  for (Edge e : board.g.shortestPath(board.positionOf(3, 3), board.positionOf(10, 5))) {
     line(e.a.position.x, e.a.position.y, e.b.position.x, e.b.position.y);
   }
   popStyle();
