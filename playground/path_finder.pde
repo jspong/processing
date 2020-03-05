@@ -1,5 +1,9 @@
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 
 public class Edge {
   Node a, b;
@@ -90,6 +94,22 @@ class Graph {
     return newNode;
   }
   
+  Set<Node> getNeighbors(PVector position) {
+    return getNeighbors(new Node(position));
+  }
+  
+  Set<Node> getNeighbors(Node n) {
+    Set<Node> nodes = new HashSet<Node>();
+    for (Edge e : edges) {
+      if (e.a.equals(n) && !e.b.equals(n)) {
+        nodes.add(e.b);
+      } else if (e.b.equals(n) && !e.a.equals(n)) {
+        nodes.add(e.a);
+      }
+    }
+    return nodes;
+  }
+  
   Edge addEdge(PVector a, PVector b) {
     return addEdge(a, b, 1.0); 
   }
@@ -102,6 +122,70 @@ class Graph {
     nodes.add(nodeA);
     nodes.add(nodeB);
     return edge;
+  }
+  
+  List<Edge> shortestPath(PVector a, PVector b) {
+    Set<Node> visited = new HashSet<Node>();
+    Map<Node, Float> distances = new HashMap<Node, Float>();
+    for (Node n : nodes) {
+      distances.put(n, 0f); 
+    }
+    Set<Node> toVisit = new HashSet<Node>();
+    toVisit.add(new Node(a));
+    while (visited.size() < nodes.size()) {
+      Node current = null;
+      float distance = Integer.MAX_VALUE;
+      for (Node n : (toVisit.size() == 0 ? nodes : toVisit)) {
+        if (visited.contains(n)) continue;
+        if (distances.get(n) < distance) {
+          distance = distances.get(n);
+          current = n;
+          print(distance + " " + current + " ");
+        }
+      }
+      
+      toVisit.remove(current);
+      
+      print("\n");
+      Set<Node> neighbors = getNeighbors(current);
+      boolean unvisitedNeighbors = false;
+      for (Node neighbor : neighbors) {
+        if (visited.contains(neighbor)) continue;
+        unvisitedNeighbors = true;
+        if (distances.get(neighbor) == 0 || distances.get(neighbor) > distances.get(current) + 1) { // TODO: cost != 1
+          distances.put(neighbor, distances.get(current) + 1);
+        }
+        toVisit.add(neighbor);
+      }
+      visited.add(current);
+    }
+    
+    for (Node node : visited) {
+      fill(0);
+      textSize(18);
+      text((int)distances.get(node).floatValue(), node.position.x, node.position.y);
+      print(distances.get(node) + " " + node.position.x + " " + node.position.y + "\n");
+    }
+    
+    Node target = new Node(b);
+    Node start = new Node(a);
+    Node current = target;
+    
+    List<Edge> path = new ArrayList<Edge>();
+    
+    while (!current.equals(start)) {
+      Node last = current;
+      float distance = distances.get(current);
+      for (Node neighbor : getNeighbors(current)) {
+        if (distances.get(neighbor) < distance) {
+          distance = distances.get(neighbor);
+          current = neighbor;
+        }
+      }
+      path.add(0, new Edge(current, last));
+    }
+    
+    return path;
   }
 }
 
@@ -120,7 +204,7 @@ class Board {
     for (int i = 0; i < h; i++) {
       spaces[i] = new color[w];
     }
-    g = new Graph(); 
+    g = new Graph();
     for (int x = 0; x < w; x++) {
       for (int y = 0; y < h; y++) {
         if (x > 0) {
@@ -172,6 +256,13 @@ public void setupPathFinder() {
 public void drawPathFinder() {
   background(255);
   board.draw();
+  List<Edge> path = board.g.shortestPath(board.positionOf(3, 3), board.positionOf(10, 5));
+ 
+  strokeWeight(4);
+  for (Edge e : path) {
+    stroke(255,0,0);
+    line(e.a.position.x, e.a.position.y, e.b.position.x, e.b.position.y);
+  }
 }
 
 public class GraphTests extends TestCase {
