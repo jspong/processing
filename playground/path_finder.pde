@@ -240,9 +240,6 @@ class Board {
       fill(200);
       circle(n.position.x, n.position.y, circleSize);
     }
-    for (Edge e : board.g.edges) {
-      line(e.a.position.x, e.a.position.y, e.b.position.x, e.b.position.y); 
-    }
   }
 }
 
