@@ -148,10 +148,8 @@ class Graph {
       toVisit.remove(current);
       
       Set<Node> neighbors = getNeighbors(current);
-      boolean unvisitedNeighbors = false;
       for (Node neighbor : neighbors) {
         if (visited.contains(neighbor)) continue;
-        unvisitedNeighbors = true;
         float distanceToNeighbor = 1;
         for (Edge e : edges) {
           if (e.equals(new Edge(current, neighbor))) {
