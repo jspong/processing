@@ -131,8 +131,10 @@ class Graph {
       distances.put(n, 0f); 
     }
     Set<Node> toVisit = new HashSet<Node>();
-    toVisit.add(new Node(a));
-    while (visited.size() < nodes.size()) {
+    Node target = new Node(b);
+    Node start = new Node(a);
+    toVisit.add(start);
+    while (!visited.contains(target)) {
       Node current = null;
       float distance = Integer.MAX_VALUE;
       for (Node n : (toVisit.size() == 0 ? nodes : toVisit)) {
@@ -171,8 +173,6 @@ class Graph {
       text(String.format("%.2f", distances.get(node)), node.position.x, node.position.y);
     }
     
-    Node target = new Node(b);
-    Node start = new Node(a);
     Node current = target;
     
     List<Edge> path = new ArrayList<Edge>();
