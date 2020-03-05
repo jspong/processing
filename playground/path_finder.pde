@@ -48,7 +48,7 @@ public class Edge {
       closer = b;
       farther = a;
     }
-    return updateHash(updateHash(int(cost * 31), closer), farther);
+    return updateHash(closer.hashCode(), farther);
   }
 }
 
@@ -140,20 +140,25 @@ class Graph {
         if (distances.get(n) < distance) {
           distance = distances.get(n);
           current = n;
-          print(distance + " " + current + " ");
         }
       }
       
       toVisit.remove(current);
       
-      print("\n");
       Set<Node> neighbors = getNeighbors(current);
       boolean unvisitedNeighbors = false;
       for (Node neighbor : neighbors) {
         if (visited.contains(neighbor)) continue;
         unvisitedNeighbors = true;
-        if (distances.get(neighbor) == 0 || distances.get(neighbor) > distances.get(current) + 1) { // TODO: cost != 1
-          distances.put(neighbor, distances.get(current) + 1);
+        float distanceToNeighbor = 1;
+        for (Edge e : edges) {
+          if (e.equals(new Edge(current, neighbor))) {
+             distanceToNeighbor = e.cost;
+             break;
+          }
+        }
+        if (distances.get(neighbor) == 0 || distances.get(neighbor) > distances.get(current) + distanceToNeighbor) {
+          distances.put(neighbor, distances.get(current) + distanceToNeighbor);
         }
         toVisit.add(neighbor);
       }
@@ -163,8 +168,7 @@ class Graph {
     for (Node node : visited) {
       fill(0);
       textSize(18);
-      text((int)distances.get(node).floatValue(), node.position.x, node.position.y);
-      print(distances.get(node) + " " + node.position.x + " " + node.position.y + "\n");
+      text(String.format("%.2f", distances.get(node)), node.position.x, node.position.y);
     }
     
     Node target = new Node(b);
@@ -208,23 +212,23 @@ class Board {
     for (int x = 0; x < w; x++) {
       for (int y = 0; y < h; y++) {
         if (x > 0) {
-          g.addEdge(positionOf(x, y), positionOf(x-1, y));
+          g.addEdge(positionOf(x, y), positionOf(x-1, y), random(1));
         }
         if (x < w-1) {
-          g.addEdge(positionOf(x, y), positionOf(x+1, y)); 
+          g.addEdge(positionOf(x, y), positionOf(x+1, y), random(1)); 
         }
         if (y > 0) {
-          g.addEdge(positionOf(x, y), positionOf(x, y-1));
+          g.addEdge(positionOf(x, y), positionOf(x, y-1), random(1));
         }
         if (y < h-1) {
-          g.addEdge(positionOf(x, y), positionOf(x, y+1));
+          g.addEdge(positionOf(x, y), positionOf(x, y+1), random(1));
         }
         if (y % 2 == 1) {
           if (y > 0 && x > 0) {
-            g.addEdge(positionOf(x, y), positionOf(x-1, y-1));
+            g.addEdge(positionOf(x, y), positionOf(x-1, y-1), random(1));
           }
           if (y < h-1 && x > 0) {
-            g.addEdge(positionOf(x, y), positionOf(x-1, y+1)); 
+            g.addEdge(positionOf(x, y), positionOf(x-1, y+1), random(1)); 
           }
         }
       }
@@ -246,20 +250,22 @@ class Board {
 Board board;
 
 public void setupPathFinder() {
-  board = new Board(50);
-  noLoop();
+  
 }
 
 public void drawPathFinder() {
+  board = new Board(50);
   background(255);
   board.draw();
   List<Edge> path = board.g.shortestPath(board.positionOf(3, 3), board.positionOf(10, 5));
  
+  pushStyle();
   strokeWeight(4);
+  stroke(255,0,0);
   for (Edge e : path) {
-    stroke(255,0,0);
     line(e.a.position.x, e.a.position.y, e.b.position.x, e.b.position.y);
   }
+  popStyle();
 }
 
 public class GraphTests extends TestCase {
